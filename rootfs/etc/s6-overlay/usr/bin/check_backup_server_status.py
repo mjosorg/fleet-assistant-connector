@@ -2,7 +2,7 @@
 import time
 import requests
 
-URL = "http://127.0.0.1:8000/status"
+URL = "http://127.0.0.1:8000/fleet_assistant_status"
 
 def check_status():
     try:
