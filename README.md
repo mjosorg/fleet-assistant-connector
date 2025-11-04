@@ -1,4 +1,4 @@
-# Home Assistant Add-on: m-connect
+# Home Assistant Add-on: Fleet Assistant connector
 
 Wireguard client for Home Assistant
 
@@ -11,6 +11,8 @@ The default IP range configured is to have the wireguard master running 10.170.2
 The range is selected to not interfer with standard home router IP ranges
 
 # Development
+
+https://developers.home-assistant.io/docs/add-ons/testing
 
 To set up a local development environment use dev container in visual studio code.
 Open the root folder inside VS Code, and when prompted re-open the window inside the container (or, from the Command Palette, select 'Rebuild and Reopen in Container').
