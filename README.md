@@ -4,6 +4,8 @@ Wireguard client for Home Assistant
 
 # About
 
+Fleet Assistant connector is an addon for connecting Home assistant to the Fleet Assistant software via Wireguard. The philiosofy is to have the addon as ligthweight and robust as possible.
+
 m-connect is a wireguard client for connecting Home Assistant to a remote wireguard server.
 Remote connection client for home-assistant. The use case is to have a wireguard server in the cloud with a proxy like traefik or nginx to do SSL resolving and forward requests to the correct wireguard client (Home Assistant instance).
 

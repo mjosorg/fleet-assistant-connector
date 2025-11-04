@@ -6,8 +6,6 @@ FROM $BUILD_FROM
 RUN \
   apk add --no-cache \
     wireguard-tools \
-    openssh \
-    rsync \
     nano \
     jq \
     nftables \
