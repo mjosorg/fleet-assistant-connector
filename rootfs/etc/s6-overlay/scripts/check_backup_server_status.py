@@ -1,8 +1,18 @@
 # This code will query the Fleet Assistant backup server and check if it's time to create and upload a new backup.
 import time
 import requests
+import argparse
 
-URL = "http://127.0.0.1:8000/fleet_assistant_status"
+
+parser = argparse.ArgumentParser(
+    description="Trigger a backup via fleet assistant API"
+)
+parser.add_argument("--FleetAssistantServerIP", required=True, type=str)
+args = parser.parse_args()
+
+FleetAssistantServerIP = args.FleetAssistantServerIP
+
+URL = f"http://{FleetAssistantServerIP}:8000/fleet_assistant_status"
 
 def check_status():
     try:

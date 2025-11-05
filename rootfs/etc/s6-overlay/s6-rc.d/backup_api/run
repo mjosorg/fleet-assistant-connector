@@ -2,4 +2,4 @@
 
 bashio::log.info "---------Starting python API sript--------"
 
-python3 /etc/s6-overlay/scripts/check_backup_server_status.py
+python3 /etc/s6-overlay/scripts/check_backup_server_status.py --FleetAssistantServerIP 10.170.204.1

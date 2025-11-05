@@ -11,6 +11,8 @@ RUN \
     nftables \
     coreutils \
     python3 \
-    py3-pip
+    py3-pip && \
+  pip install --no-cache-dir requests argparse
+
 
 COPY rootfs /
