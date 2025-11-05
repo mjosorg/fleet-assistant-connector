@@ -2,4 +2,14 @@
 
 bashio::log.info "---------Starting python API sript--------"
 
-exec python3 -u /etc/s6-overlay/scripts/check_backup_server_status.py --FleetAssistantServerIP 10.170.204.1
+declare FleetAssistantServerIP
+
+FleetAssistantServerIP="10.170.204.1"
+
+
+# Get config input from addon UI
+#if bashio::config.has_value "server.publickey"; then
+#    publickey=$(bashio::config "server.publickey")
+#fi
+
+exec python3 -u /etc/s6-overlay/scripts/check_backup_server_status.py --FleetAssistantServerIP ${FleetAssistantServerIP}
