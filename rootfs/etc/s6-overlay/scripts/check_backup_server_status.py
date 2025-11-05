@@ -33,4 +33,4 @@ while True:
     print("Checking status...")
     check_status()
     print("Sleeping...")
-    time.sleep(600)  # wait 10 minutes (600 seconds)
+    time.sleep(30)  # wait 10 minutes (600 seconds)
