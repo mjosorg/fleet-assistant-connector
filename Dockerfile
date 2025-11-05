@@ -12,7 +12,7 @@ RUN \
     coreutils \
     python3 \
     py3-pip \
-    && pip install --no-cache-dir requests
+    && pip install --no-cache-dir --break-system-packages requests
 
 #RUN pip3 install --no-cache-dir requests
 
