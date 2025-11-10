@@ -1,6 +1,6 @@
 name: "Fleet Assistant Connector DEV"
 description: "Fleet assistant connector"
-version: "2025.11.08"
+version: "2025.11.09"
 slug: "fleet_assistant_connector_dev"
 init: false
 url: https://github.com/mjosorg/fleet-assistant-connector-dev
@@ -29,6 +29,7 @@ options:
     tunnelip: inputtunnelIP
     enable_backup: false
     installation_id: Installation ID
+    fleet_token: Fleet Token
 
 schema:
   server:
@@ -38,3 +39,4 @@ schema:
     tunnelip: str
     enable_backup: bool
     installation_id: str
+    fleet_token: str

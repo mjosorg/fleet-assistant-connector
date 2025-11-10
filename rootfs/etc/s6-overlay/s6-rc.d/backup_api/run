@@ -3,13 +3,22 @@
 bashio::log.info "---------Starting python API sript--------"
 
 declare FleetAssistantServerIP
+declare FleetToken
+declare Installation_id
 
 FleetAssistantServerIP="10.170.204.1"
 
-
+# Get config input from addon UI
+if bashio::config.has_value "server.fleet_token"; then
+    FleetToken=$(bashio::config "server.fleet_token")
+fi
+# Get config input from addon UI
+if bashio::config.has_value "server.installation_id"; then
+    Installation_id=$(bashio::config "server.installation_id")
+fi
 # Get config input from addon UI
 #if bashio::config.has_value "server.publickey"; then
 #    publickey=$(bashio::config "server.publickey")
 #fi
 
-exec python3 -u /etc/s6-overlay/scripts/check_backup_server_status.py --FleetAssistantServerIP ${FleetAssistantServerIP}
+exec python3 -u /etc/s6-overlay/scripts/check_backup_server_status.py --FleetAssistantServerIP ${FleetAssistantServerIP} --FleetToken ${FleetToken} --Installation_id ${Installation_id}

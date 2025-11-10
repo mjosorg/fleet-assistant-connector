@@ -10,21 +10,29 @@ parser = argparse.ArgumentParser(
     description="Trigger a backup via fleet assistant API"
 )
 parser.add_argument("--FleetAssistantServerIP", required=True, type=str)
+parser.add_argument("--FleetToken", required=True, type=str)
+parser.add_argument("--Installation_id", required=True, type=str)
 args = parser.parse_args()
 
 FleetAssistantServerIP = args.FleetAssistantServerIP
+FleetToken = args.FleetToken
+Installation_id = args.Installation_id
 
 URL = f"http://{FleetAssistantServerIP}:8000/fleet_assistant_status"
 
-print(f"{URL}")
+print(f"Using Fleet Assistant server: {URL}")
+print(f"Installation ID: {InstallationID}")
 
 def check_status():
     try:
-        response = requests.get(URL, timeout=5)
+        headers = {"X-Token": FleetToken}
+        params = {"installation_id": InstallationID}
+
+        response = requests.get(URL, headers=headers, params=params, timeout=5)
         if response.status_code == 200:
             print(f"[OK] {response.json()['message']}")
         else:
-            print(f"[ERROR] Status code: {response.status_code}")
+            print(f"[ERROR] Status code: {response.status_code}, detail: {response.text}")
     except Exception as e:
         print(f"[EXCEPTION] {e}")
 
