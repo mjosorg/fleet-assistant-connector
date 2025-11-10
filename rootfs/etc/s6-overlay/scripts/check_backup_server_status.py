@@ -21,12 +21,12 @@ Installation_id = args.Installation_id
 URL = f"http://{FleetAssistantServerIP}:8000/fleet_assistant_status"
 
 print(f"Using Fleet Assistant server: {URL}")
-print(f"Installation ID: {InstallationID}")
+print(f"Installation ID: {Installation_id}")
 
 def check_status():
     try:
         headers = {"X-Token": FleetToken}
-        params = {"installation_id": InstallationID}
+        params = {"installation_id": Installation_id}
 
         response = requests.get(URL, headers=headers, params=params, timeout=5)
         if response.status_code == 200:
