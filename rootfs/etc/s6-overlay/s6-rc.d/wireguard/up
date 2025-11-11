@@ -1,16 +1,1 @@
-#!/command/with-contenv bashio
-# ==============================================================================
-# Home Assistant Community Add-on: WireGuard
-# Runs WireGuard
-# ==============================================================================
-declare interface
-
-#s6-svc -O /run/service/wireguard
-
-bashio::log.info "Starting WireGuard..."
-
-# Get the interface
-interface="m-connect"
-
-# Run the WireGuard
-exec wg-quick up "${interface}"
+/etc/s6-overlay/scripts/StartWireguard
