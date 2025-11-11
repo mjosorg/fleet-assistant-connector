@@ -5,15 +5,12 @@
 # ==============================================================================
 declare interface
 
-s6-svc -O /run/service/wireguard
+#s6-svc -O /run/service/wireguard
 
 bashio::log.info "Starting WireGuard..."
 
 # Get the interface
 interface="m-connect"
-#if bashio::config.has_value "server.interface"; then
-#    interface=$(bashio::config "server.interface")
-#fi
 
 # Run the WireGuard
 exec wg-quick up "${interface}"
