@@ -31,8 +31,9 @@ def check_status():
 
         response = requests.get(URL, headers=headers, params=params, timeout=5)
         if response.status_code == 200:
-            print(f"[OK] {response.json()['message']}")
-            return response.json()['message']
+            print(f"[OK] {response.json()['backup_needed']}")
+
+            return response.json()['backup_needed']
         else:
             print(f"[ERROR] Status code: {response.status_code}, detail: {response.text}")
             return "none"
@@ -42,10 +43,13 @@ def check_status():
 
 
 while True:
-    backup_status = check_status()
-    if backup_status == "backup_needed":
+    backup_creation_needed = check_status()
+    if backup_creation_needed == True:
         print("Triggering backup creation and upload...")
-        create_backup()
+        backup_slug = create_backup()
+        print(backup_slug)
+    #    download_backup(backup_slug, "/tmp/backup.tar")
+     #   upload_backup(FleetToken, Installation_id)
     else:
         print("No backup needed at this time.")
 
