@@ -5,9 +5,6 @@ import requests
 import argparse
 from helper_backup import create_backup, download_backup, upload_backup, cleanup
 
-print("Invoking backup check script")
-
-
 parser = argparse.ArgumentParser(
     description="Trigger a backup via fleet assistant API"
 )
@@ -54,8 +51,13 @@ while True:
         filename = f"/tmp/backup-{timestamp}.tar"
 
         download_backup(backup_slug, filename)
-     #   upload_backup(FleetAssistantServerIP, FleetToken, Installation_id, filename)
-       # cleanup(filename)
+
+        upload_suceeded=upload_backup(FleetAssistantServerIP, FleetToken, Installation_id, filename)
+
+        if upload_suceeded == True:
+            cleanup(filename)
+        else
+            print("Upload failed, not deleting local backup file.")
     else:
         print("No backup needed at this time.")
 
