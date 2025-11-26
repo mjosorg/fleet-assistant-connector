@@ -43,9 +43,7 @@ def check_status():
 while True:
     backup_creation_needed = check_status()
     if backup_creation_needed == True:
-        print("Triggering backup creation and upload...")
         backup_slug = create_backup()
-        print(f"Backup slug: {backup_slug}")
 
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         filename = f"/tmp/backup-{timestamp}.tar"
@@ -61,5 +59,4 @@ while True:
     else:
         print("No backup needed at this time.")
 
-    print("Sleeping...")
-    time.sleep(1200)  # wait 10 minutes (600 seconds)
+    time.sleep(600)  # wait 10 minutes (600 seconds)
