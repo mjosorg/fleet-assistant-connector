@@ -17,7 +17,7 @@ fi
 if [[ $backup_enable = false ]]; then
     bashio::log.warning "Backup is disabled. Backup creation will not happen."
     bashio::log.warning "Backup function will stop. Restart addon with backup option enabled in config to start backup functionality again"
-    exit 0
+    while true; do sleep 1h; done
 fi
 
 # Get Fleet Assistant token from addon configuration page
