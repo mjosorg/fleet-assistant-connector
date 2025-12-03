@@ -29,8 +29,7 @@ def check_status():
 
         response = requests.get(URL, headers=headers, params=params, timeout=5)
         if response.status_code == 200:
-            print(f"[OK] {response.json()['backup_needed']}")
-
+          
             return response.json()['backup_needed']
         else:
             print(f"[ERROR] Status code: {response.status_code}, detail: {response.text}")
@@ -57,6 +56,6 @@ while True:
         else:
             print("Upload failed, not deleting local backup file.")
     else:
-        print("No backup needed at this time.")
+        continue
 
     time.sleep(600)  # wait 10 minutes (600 seconds)

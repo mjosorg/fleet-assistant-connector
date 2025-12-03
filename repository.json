@@ -1,5 +1,5 @@
 {
     "name": "Fleet assistant connector for Home Assistant",
-    "url": "https://github.com/mjosorg/fleet-assistant-connector-dev",
+    "url": "https://github.com/mjosorg/fleet-assistant-connector",
     "maintainer": "Post <post@fleet-assistant.io>"
 }
