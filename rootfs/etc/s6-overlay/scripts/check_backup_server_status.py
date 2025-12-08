@@ -22,6 +22,9 @@ URL = f"http://{FleetAssistantServerIP}:8000/fleet_assistant_status"
 print(f"Using Fleet Assistant server: {URL}")
 print(f"Installation ID: {Installation_id}")
 
+def timestamp():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 def check_status():
     try:
         headers = {"X-Token": FleetToken}
@@ -32,11 +35,12 @@ def check_status():
           
             return response.json()['backup_needed']
         else:
-            print(f"[ERROR] Status code: {response.status_code}, detail: {response.text}")
+            print(f"[{timestamp()}] [ERROR] Status code: {response.status_code}, detail: {response.text}")
             return "none"
             
     except Exception as e:
-        print(f"[EXCEPTION] {e}")
+        print(f"[{timestamp()}] [EXCEPTION] {e}")
+        return "none"
 
 
 while True:
