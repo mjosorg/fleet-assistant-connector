@@ -49,8 +49,6 @@ def download_backup(backup_slug, file_name):
                 if chunk:  # filter out keep-alive chunks
                     f.write(chunk)
 
-    print(f"Backup {backup_slug} downloaded successfully to {file_name}")
-
 
 def upload_backup(FleetAssistantServerIP, FleetToken, Installation_id, filename):
     # Upload to fleet assistant admin server
@@ -75,7 +73,6 @@ def upload_backup(FleetAssistantServerIP, FleetToken, Installation_id, filename)
         r = requests.post(url, data=f, headers=headers, params=params)
         
     if r.status_code == 200:
-        print("Upload succeeded")
         return True
     else:
         print(f"Upload failed with status code {r.status_code} and response: {r.json()}")
@@ -86,7 +83,6 @@ def upload_backup(FleetAssistantServerIP, FleetToken, Installation_id, filename)
 def cleanup(file_source):
     try:
         os.remove(file_source)
-        print(f"Deleted file: {file_source}")
     except FileNotFoundError:
         print(f"File not found: {file_source}")
     except Exception as e:

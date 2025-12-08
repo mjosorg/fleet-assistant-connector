@@ -4,6 +4,12 @@ Wireguard client for Home Assistant
 
 IMPORTANT. After first time configuration and setup. You need to restart home assistant for changes in the config file related to accepted proxies to take effect
 
+To add in Home Assistant add this repository: 
+
+https://github.com/mjosorg/fleet-assistant-connector
+
+For development version add this: https://github.com/mjosorg/fleet-assistant-connector#dev
+
 # About
 
 Fleet Assistant connector is an addon for connecting Home assistant to the Fleet Assistant software via Wireguard. The philiosofy is to have the addon as ligthweight and robust as possible.
