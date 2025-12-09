@@ -1,7 +1,7 @@
-name: "Fleet Assistant Connector [DEV]"
+name: "Fleet Assistant Connector"
 description: "Fleet assistant connector"
 version: "2025.12.02"
-slug: "fleet_assistant_connector_dev"
+slug: "fleet_assistant_connector"
 init: false
 url: https://github.com/mjosorg/fleet-assistant-connector
 hassio_api: true
