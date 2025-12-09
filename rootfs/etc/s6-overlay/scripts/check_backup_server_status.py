@@ -48,8 +48,8 @@ while True:
     if backup_creation_needed == True:
         backup_slug = create_backup()
 
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        filename = f"/tmp/backup-{timestamp}.tar"
+        timestamp_filename = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = f"/tmp/backup-{timestamp_filename}.tar"
 
         download_backup(backup_slug, filename)
 
