@@ -59,7 +59,15 @@ while True:
             cleanup(filename)
         else:
             print("Upload failed, not deleting local backup file.")
-    else:
-        continue
+    
+    elif backup_creation_needed == "none":
+        # This handles your exceptions and non-200 status codes
+        print(f"[{timestamp()}] [INFO] Error encountered. Waiting 10 minutes before retry...")
 
-    time.sleep(600)  # wait 10 minutes (600 seconds)
+    else:
+        # backup_creation_needed is False
+        print(f"[{timestamp()}] [INFO] No backup needed at this time.")
+
+    time.sleep(600)
+
+    time.sleep(600)
