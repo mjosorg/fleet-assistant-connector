@@ -69,5 +69,3 @@ while True:
         print(f"[{timestamp()}] [INFO] No backup needed at this time.")
 
     time.sleep(600)
-
-    time.sleep(600)
