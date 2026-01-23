@@ -66,6 +66,7 @@ while True:
 
     else:
         # backup_creation_needed is False
-        print(f"[{timestamp()}] [INFO] No backup needed at this time.")
+        #print(f"[{timestamp()}] [INFO] No backup needed at this time.")
+        continue
 
     time.sleep(600)
