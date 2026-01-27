@@ -35,14 +35,15 @@ def check_update_available():
         # Eksempel på hvordan man tolker dataen for å matche ditt ønskede format
         if data.get("result") == "ok":
 <<<<<<< HEAD
+<<<<<<< HEAD
             return data["data"]
 =======
             has_update = data["data"].get("update_available", False)
             latest_version = data["data"].get("version_latest")
             
+=======
+>>>>>>> b5a4ac9 (payload fix)
             return {
-                "update_available": has_update,
-                "latest_version": latest_version,
                 "raw_data": data["data"]
             }
 >>>>>>> 81e05fb (added check for update available)
