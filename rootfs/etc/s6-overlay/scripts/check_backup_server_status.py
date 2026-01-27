@@ -67,10 +67,14 @@ while True:
 =======
         print(f"[{datetime.now()}] Update status: {updates}")
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 23fc5ff (fix for looping)
 =======
         upload_updates(updates)
 >>>>>>> c9d4c90 (sending data updates to server)
+=======
+        upload_updates(FleetAssistantServerIP, FleetToken, Installation_id, updates)
+>>>>>>> 469b7df (addedd missing arguments)
 
         if backup_creation_needed is True:
             backup_slug = create_backup()
