@@ -1,8 +1,12 @@
 import requests
 <<<<<<< HEAD
+<<<<<<< HEAD
 import os
 =======
 >>>>>>> 81e05fb (added check for update available)
+=======
+import os
+>>>>>>> c5c4e60 (fixed missing import)
 
 def check_update_available():
     # Get the supervisor token from environment variable
