@@ -31,7 +31,7 @@ def check_status():
         headers = {"X-Token": FleetToken}
         params = {"installation_id": Installation_id}
 
-        response = requests.get(URL, headers=headers, params=params, timeout=20)
+        response = requests.get(URL, headers=headers, params=params, timeout=30)
         if response.status_code == 200:
             return response.json()['backup_needed']
         else:
