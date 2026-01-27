@@ -31,7 +31,7 @@ def check_status():
         headers = {"X-Token": FleetToken}
         params = {"installation_id": Installation_id}
 
-        response = requests.get(URL, headers=headers, params=params, timeout=30)
+        response = requests.get(URL, headers=headers, params=params, timeout=20)
         if response.status_code == 200:
             return response.json()['backup_needed']
         else:
@@ -44,31 +44,33 @@ def check_status():
 
 
 while True:
-    backup_creation_needed = check_status()
-    print(check_update_available())
+    try:
+        backup_creation_needed = check_status()
+        
+        updates = check_update_available()
+        print(f"[{datetime.now()}] Update status: {updates}")
 
-    if backup_creation_needed == True:
-        backup_slug = create_backup()
+        if backup_creation_needed is True:
+            backup_slug = create_backup()
+            timestamp_str = datetime.now().strftime("%Y%m%d-%H%M%S")
+            filename = f"/tmp/backup-{timestamp_str}.tar"
 
-        timestamp_filename = datetime.now().strftime("%Y%m%d-%H%M%S")
-        filename = f"/tmp/backup-{timestamp_filename}.tar"
+            download_backup(backup_slug, filename)
+            upload_suceeded = upload_backup(FleetAssistantServerIP, FleetToken, Installation_id, filename)
 
-        download_backup(backup_slug, filename)
+            if upload_suceeded:
+                cleanup(filename)
+            else:
+                print(f"[{datetime.now()}] Upload failed, not deleting {filename}")
 
-        upload_suceeded=upload_backup(FleetAssistantServerIP, FleetToken, Installation_id, filename)
+        elif backup_creation_needed == "none":
+            print(f"[{datetime.now()}] Error encountered in check_status.")
 
-        if upload_suceeded == True:
-            cleanup(filename)
         else:
-            print("Upload failed, not deleting local backup file.")
-    
-    elif backup_creation_needed == "none":
-        # This handles your exceptions and non-200 status codes
-        print(f"[{timestamp()}] [INFO] Error encountered. Waiting 10 minutes before retry...")
+            pass
 
-    else:
-        # backup_creation_needed is False
-        #print(f"[{timestamp()}] [INFO] No backup needed at this time.")
-        continue
+    except Exception as e:
+        print(f"[{datetime.now()}] Critical error in loop: {e}")
 
+    print(f"[{datetime.now()}] Sleeping for 10 minutes...")
     time.sleep(600)
