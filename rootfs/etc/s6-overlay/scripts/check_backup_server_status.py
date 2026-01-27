@@ -32,7 +32,6 @@ def check_status():
 
         response = requests.get(URL, headers=headers, params=params, timeout=30)
         if response.status_code == 200:
-          
             return response.json()['backup_needed']
         else:
             print(f"[{timestamp()}] [ERROR] Status code: {response.status_code}, detail: {response.text}")
@@ -45,6 +44,8 @@ def check_status():
 
 while True:
     backup_creation_needed = check_status()
+    print(check_update_available())
+
     if backup_creation_needed == True:
         backup_slug = create_backup()
 
