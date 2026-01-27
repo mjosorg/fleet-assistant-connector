@@ -12,8 +12,12 @@ from helper_backup import create_backup, download_backup, upload_backup, cleanup
 >>>>>>> 7b2a33b (fix import error)
 =======
 from helper_backup import create_backup, download_backup, upload_backup, cleanup
+<<<<<<< HEAD
 from helper_updates import check_update_available
 >>>>>>> 9402caf (fixed again)
+=======
+from helper_updates import check_update_available, upload_updates
+>>>>>>> c9d4c90 (sending data updates to server)
 
 parser = argparse.ArgumentParser(
     description="Trigger a backup via fleet assistant API"
@@ -62,7 +66,11 @@ while True:
         upload_updates(FleetAssistantServerIP, FleetToken, Installation_id, updates)
 =======
         print(f"[{datetime.now()}] Update status: {updates}")
+<<<<<<< HEAD
 >>>>>>> 23fc5ff (fix for looping)
+=======
+        upload_updates(updates)
+>>>>>>> c9d4c90 (sending data updates to server)
 
         if backup_creation_needed is True:
             backup_slug = create_backup()

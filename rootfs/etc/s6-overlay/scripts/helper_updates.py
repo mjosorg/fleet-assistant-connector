@@ -51,6 +51,9 @@ def check_update_available():
         return {"error": f"HTTP error: {err.response.status_code}"}
     except Exception as e:
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> c9d4c90 (sending data updates to server)
         return {"error": f"Problem occured: {str(e)}"}
 
 
@@ -72,6 +75,9 @@ def upload_updates(FleetAssistantServerIP, FleetToken, Installation_id, update_s
         print(f"Upload of version status failed with status code {r.status_code} and response: {r.json()}")
         return False
 
+<<<<<<< HEAD
 =======
         return {"error": f"Problem occured: {str(e)}"}
 >>>>>>> 81e05fb (added check for update available)
+=======
+>>>>>>> c9d4c90 (sending data updates to server)
