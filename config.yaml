@@ -2,6 +2,7 @@ name: "Fleet Assistant Connector"
 description: "Fleet assistant connector"
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 version: "2026.02.01"
 slug: "fleet_assistant_connector"
 =======
@@ -9,6 +10,9 @@ version: "2026.01.13"
 =======
 version: "2026.01.14"
 >>>>>>> b5a4ac9 (payload fix)
+=======
+version: "2026.01.15"
+>>>>>>> 236bbf5 (data is return)
 slug: "fleet_assistant_connector_dev"
 >>>>>>> 6bf8593 (removed print statement)
 init: false

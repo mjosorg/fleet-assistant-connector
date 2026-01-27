@@ -36,6 +36,7 @@ def check_update_available():
         if data.get("result") == "ok":
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             return data["data"]
 =======
             has_update = data["data"].get("update_available", False)
@@ -47,6 +48,9 @@ def check_update_available():
                 "raw_data": data["data"]
             }
 >>>>>>> 81e05fb (added check for update available)
+=======
+            return data["data"]
+>>>>>>> 236bbf5 (data is return)
             
     except requests.exceptions.HTTPError as err:
         return {"error": f"HTTP error: {err.response.status_code}"}
