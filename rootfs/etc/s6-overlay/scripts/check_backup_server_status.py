@@ -72,5 +72,4 @@ while True:
     except Exception as e:
         print(f"[{datetime.now()}] Critical error in loop: {e}")
 
-    print(f"[{datetime.now()}] Sleeping for 10 minutes...")
     time.sleep(600)
