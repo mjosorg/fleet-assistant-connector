@@ -1,5 +1,8 @@
 import requests
+<<<<<<< HEAD
 import os
+=======
+>>>>>>> 81e05fb (added check for update available)
 
 def check_update_available():
     # Get the supervisor token from environment variable
@@ -27,11 +30,23 @@ def check_update_available():
         
         # Eksempel på hvordan man tolker dataen for å matche ditt ønskede format
         if data.get("result") == "ok":
+<<<<<<< HEAD
             return data["data"]
+=======
+            has_update = data["data"].get("update_available", False)
+            latest_version = data["data"].get("version_latest")
+            
+            return {
+                "update_available": has_update,
+                "latest_version": latest_version,
+                "raw_data": data["data"]
+            }
+>>>>>>> 81e05fb (added check for update available)
             
     except requests.exceptions.HTTPError as err:
         return {"error": f"HTTP error: {err.response.status_code}"}
     except Exception as e:
+<<<<<<< HEAD
         return {"error": f"Problem occured: {str(e)}"}
 
 
@@ -53,3 +68,6 @@ def upload_updates(FleetAssistantServerIP, FleetToken, Installation_id, update_s
         print(f"Upload of version status failed with status code {r.status_code} and response: {r.json()}")
         return False
 
+=======
+        return {"error": f"Problem occured: {str(e)}"}
+>>>>>>> 81e05fb (added check for update available)
