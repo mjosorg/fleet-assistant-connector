@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 import requests
 import argparse
-from helper_backup import create_backup, download_backup, upload_backup, cleanup
+from helper_backup import create_backup, download_backup, upload_backup, cleanup, check_update_available
 
 parser = argparse.ArgumentParser(
     description="Trigger a backup via fleet assistant API"
