@@ -40,7 +40,7 @@ def check_status():
         headers = {"X-Token": FleetToken}
         params = {"installation_id": Installation_id}
 
-        response = requests.get(URL, headers=headers, params=params, timeout=30)
+        response = requests.get(URL, headers=headers, params=params, timeout=20)
         if response.status_code == 200:
             return response.json()['backup_needed']
         else:
@@ -57,8 +57,12 @@ while True:
         backup_creation_needed = check_status()
         
         updates = check_update_available()
+<<<<<<< HEAD
         #print(f"[{datetime.now()}] Update status: {updates}")
         upload_updates(FleetAssistantServerIP, FleetToken, Installation_id, updates)
+=======
+        print(f"[{datetime.now()}] Update status: {updates}")
+>>>>>>> 23fc5ff (fix for looping)
 
         if backup_creation_needed is True:
             backup_slug = create_backup()
@@ -82,4 +86,5 @@ while True:
     except Exception as e:
         print(f"[{datetime.now()}] Critical error in loop: {e}")
 
+    print(f"[{datetime.now()}] Sleeping for 10 minutes...")
     time.sleep(600)
