@@ -4,7 +4,7 @@ from datetime import datetime
 import requests
 import argparse
 from helper_backup import create_backup, download_backup, upload_backup, cleanup
-from helper_updates import check_update_available
+from helper_updates import check_update_available, upload_updates
 
 parser = argparse.ArgumentParser(
     description="Trigger a backup via fleet assistant API"
@@ -49,6 +49,7 @@ while True:
         
         updates = check_update_available()
         print(f"[{datetime.now()}] Update status: {updates}")
+        upload_updates(updates)
 
         if backup_creation_needed is True:
             backup_slug = create_backup()
