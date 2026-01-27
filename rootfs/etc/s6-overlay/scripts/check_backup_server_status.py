@@ -48,7 +48,7 @@ while True:
         backup_creation_needed = check_status()
         
         updates = check_update_available()
-        print(f"[{datetime.now()}] Update status: {updates}")
+        #print(f"[{datetime.now()}] Update status: {updates}")
         upload_updates(FleetAssistantServerIP, FleetToken, Installation_id, updates)
 
         if backup_creation_needed is True:
