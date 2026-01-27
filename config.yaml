@@ -1,6 +1,6 @@
 name: "Fleet Assistant Connector"
 description: "Fleet assistant connector"
-version: "2026.01.06"
+version: "2026.01.07"
 slug: "fleet_assistant_connector_dev"
 init: false
 url: https://github.com/mjosorg/fleet-assistant-connector

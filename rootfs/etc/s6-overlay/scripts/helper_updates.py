@@ -1,4 +1,5 @@
 import requests
+import os
 
 def check_update_available():
     # Get the supervisor token from environment variable
