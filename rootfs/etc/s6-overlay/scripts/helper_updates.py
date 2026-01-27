@@ -27,9 +27,7 @@ def check_update_available():
         
         # Eksempel på hvordan man tolker dataen for å matche ditt ønskede format
         if data.get("result") == "ok":
-            return {
-                "raw_data": data["data"]
-            }
+            return data["data"]
             
     except requests.exceptions.HTTPError as err:
         return {"error": f"HTTP error: {err.response.status_code}"}
