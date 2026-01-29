@@ -1,3 +1,8 @@
+## 2026.01.15
+- Improved logging
+- Improved loop handling
+- Added available updates function
+
 ## 2025.10.0
 - Added support for uploading backup via API instead of rsync
   
