@@ -80,10 +80,23 @@ def upload_backup(FleetAssistantServerIP, FleetToken, Installation_id, filename)
 
 
 
-def cleanup(file_source):
+def cleanup(backup_slug):
     try:
-        os.remove(file_source)
-    except FileNotFoundError:
-        print(f"File not found: {file_source}")
+        # Delete backup from supervisor
+        SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
+        if not SUPER_TOKEN:
+            raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
+
+        # Define the endpoint
+        url = f"http://supervisor/backups/{backup_slug}"
+        headers = {"Authorization": f"Bearer {SUPER_TOKEN}"}
+
+        # Send POST request to create a full backup
+        response = requests.delete(url, headers=headers)
+
+        # Check for errors
+        if not response.ok:
+            raise Exception(f"Backup deletion failed: {response.status_code} {response.text}")
+
     except Exception as e:
-        print(f"Error deleting file {file_source}: {e}")
+        print(f"Unable to delete backup slug {backup_slug}: {e}")
