@@ -58,9 +58,12 @@ while True:
 
             download_backup(backup_slug, filename)
             upload_suceeded = upload_backup(FleetAssistantServerIP, FleetToken, Installation_id, filename)
+            print("Upload succeeded: ", upload_suceeded)
+            print("Backup slug: ", backup_slug)
 
             if upload_suceeded:
-                cleanup(filename)
+                print("Should clean up")
+                cleanup(backup_slug)
             else:
                 print(f"[{datetime.now()}] Upload failed, not deleting {filename}")
 
