@@ -6,6 +6,7 @@ import argparse
 <<<<<<< HEAD
 <<<<<<< HEAD
 from helper_backup import create_backup, download_backup, upload_backup, cleanup
+<<<<<<< HEAD
 from helper_updates import check_update_available, upload_updates
 =======
 from helper_backup import create_backup, download_backup, upload_backup, cleanup, check_update_available
@@ -18,6 +19,9 @@ from helper_updates import check_update_available
 =======
 from helper_updates import check_update_available, upload_updates
 >>>>>>> c9d4c90 (sending data updates to server)
+=======
+from helper_updates import check_update_available, upload_updates, get_fleet_assistant_version
+>>>>>>> ecdab87 (fixed missing import)
 
 parser = argparse.ArgumentParser(
     description="Trigger a backup via fleet assistant API"
