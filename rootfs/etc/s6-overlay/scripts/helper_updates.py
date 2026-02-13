@@ -81,8 +81,33 @@ def upload_updates(FleetAssistantServerIP, FleetToken, Installation_id, update_s
         return False
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         return {"error": f"Problem occured: {str(e)}"}
 >>>>>>> 81e05fb (added check for update available)
 =======
 >>>>>>> c9d4c90 (sending data updates to server)
+=======
+def get_fleet_assistant_version():
+    """Henter nåværende versjon av addonen via Supervisor API."""
+    
+    SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
+    if not SUPER_TOKEN:
+        raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
+
+    url = "http://supervisor/addons/self/info"
+    headers = {"Authorization": f"Bearer {SUPER_TOKEN}"}
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()  # Kaster feil ved 4xx eller 5xx statuskoder
+        
+        data = response.json()
+        
+        # Henter ut versjonen fra 'data'-objektet
+        return data.get("data", {}).get("version")
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Kunne ikke hente versjon: {e}")
+        return None
+>>>>>>> 2637f84 (fleet_assistant_version added)

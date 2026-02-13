@@ -63,9 +63,14 @@ while True:
         updates = check_update_available()
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 6bf8593 (removed print statement)
         #print(f"[{datetime.now()}] Update status: {updates}")
+=======
+        fleet_assistant_version = get_fleet_assistant_version()
+        updates["fleet_assistant_version"] = fleet_assistant_version
+>>>>>>> 2637f84 (fleet_assistant_version added)
         upload_updates(FleetAssistantServerIP, FleetToken, Installation_id, updates)
 =======
         print(f"[{datetime.now()}] Update status: {updates}")
