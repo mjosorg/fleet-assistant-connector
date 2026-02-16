@@ -1,4 +1,4 @@
-## 2026.02.00
+## 2026.02.01
 - Fixed an issue where deletion of old backups was not working. 
 - Added version of fleet assistant app to data being sent back to admin server. 
 
