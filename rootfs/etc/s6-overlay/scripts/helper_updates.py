@@ -1,12 +1,5 @@
 import requests
-<<<<<<< HEAD
-<<<<<<< HEAD
 import os
-=======
->>>>>>> 81e05fb (added check for update available)
-=======
-import os
->>>>>>> c5c4e60 (fixed missing import)
 
 def check_update_available():
     # Get the supervisor token from environment variable
@@ -34,31 +27,11 @@ def check_update_available():
         
         # Eksempel på hvordan man tolker dataen for å matche ditt ønskede format
         if data.get("result") == "ok":
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
             return data["data"]
-=======
-            has_update = data["data"].get("update_available", False)
-            latest_version = data["data"].get("version_latest")
-            
-=======
->>>>>>> b5a4ac9 (payload fix)
-            return {
-                "raw_data": data["data"]
-            }
->>>>>>> 81e05fb (added check for update available)
-=======
-            return data["data"]
->>>>>>> 236bbf5 (data is return)
             
     except requests.exceptions.HTTPError as err:
         return {"error": f"HTTP error: {err.response.status_code}"}
     except Exception as e:
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> c9d4c90 (sending data updates to server)
         return {"error": f"Problem occured: {str(e)}"}
 
 
@@ -80,17 +53,6 @@ def upload_updates(FleetAssistantServerIP, FleetToken, Installation_id, update_s
         print(f"Upload of version status failed with status code {r.status_code} and response: {r.json()}")
         return False
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        return {"error": f"Problem occured: {str(e)}"}
->>>>>>> 81e05fb (added check for update available)
-=======
->>>>>>> c9d4c90 (sending data updates to server)
-=======
-=======
->>>>>>> 030f5d7 (new release)
 def get_fleet_assistant_version():
     """Henter nåværende versjon av addonen via Supervisor API."""
     
@@ -113,7 +75,3 @@ def get_fleet_assistant_version():
     except requests.exceptions.RequestException as e:
         print(f"Kunne ikke hente versjon: {e}")
         return None
-<<<<<<< HEAD
->>>>>>> 2637f84 (fleet_assistant_version added)
-=======
->>>>>>> 030f5d7 (new release)
