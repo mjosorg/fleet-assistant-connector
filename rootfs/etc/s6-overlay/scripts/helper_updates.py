@@ -82,12 +82,15 @@ def upload_updates(FleetAssistantServerIP, FleetToken, Installation_id, update_s
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         return {"error": f"Problem occured: {str(e)}"}
 >>>>>>> 81e05fb (added check for update available)
 =======
 >>>>>>> c9d4c90 (sending data updates to server)
 =======
+=======
+>>>>>>> 030f5d7 (new release)
 def get_fleet_assistant_version():
     """Henter nåværende versjon av addonen via Supervisor API."""
     
@@ -110,4 +113,7 @@ def get_fleet_assistant_version():
     except requests.exceptions.RequestException as e:
         print(f"Kunne ikke hente versjon: {e}")
         return None
+<<<<<<< HEAD
 >>>>>>> 2637f84 (fleet_assistant_version added)
+=======
+>>>>>>> 030f5d7 (new release)

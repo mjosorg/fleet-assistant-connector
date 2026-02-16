@@ -7,6 +7,7 @@ import argparse
 <<<<<<< HEAD
 from helper_backup import create_backup, download_backup, upload_backup, cleanup
 <<<<<<< HEAD
+<<<<<<< HEAD
 from helper_updates import check_update_available, upload_updates
 =======
 from helper_backup import create_backup, download_backup, upload_backup, cleanup, check_update_available
@@ -22,6 +23,9 @@ from helper_updates import check_update_available, upload_updates
 =======
 from helper_updates import check_update_available, upload_updates, get_fleet_assistant_version
 >>>>>>> ecdab87 (fixed missing import)
+=======
+from helper_updates import check_update_available, upload_updates, get_fleet_assistant_version
+>>>>>>> 030f5d7 (new release)
 
 parser = argparse.ArgumentParser(
     description="Trigger a backup via fleet assistant API"
@@ -68,6 +72,7 @@ while True:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 6bf8593 (removed print statement)
         #print(f"[{datetime.now()}] Update status: {updates}")
@@ -75,6 +80,10 @@ while True:
         fleet_assistant_version = get_fleet_assistant_version()
         updates["fleet_assistant_version"] = fleet_assistant_version
 >>>>>>> 2637f84 (fleet_assistant_version added)
+=======
+        fleet_assistant_version = get_fleet_assistant_version()
+        updates["fleet_assistant_version"] = fleet_assistant_version
+>>>>>>> 030f5d7 (new release)
         upload_updates(FleetAssistantServerIP, FleetToken, Installation_id, updates)
 =======
         print(f"[{datetime.now()}] Update status: {updates}")
