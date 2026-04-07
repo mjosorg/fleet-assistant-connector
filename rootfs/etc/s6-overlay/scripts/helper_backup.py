@@ -100,3 +100,37 @@ def cleanup(backup_slug):
 
     except Exception as e:
         print(f"Unable to delete backup slug {backup_slug}: {e}")
+        
+def get_installed_addons():
+    """
+    Fetches the list of installed add-ons from the Home Assistant Supervisor API.
+    """
+    # Get the supervisor token from environment variable
+    SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
+    if not SUPER_TOKEN:
+        raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
+
+    # Define the endpoint for add-ons
+    url = "http://supervisor/addons"
+    headers = {
+        "Authorization": f"Bearer {SUPER_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    # Send GET request to fetch add-on data
+    response = requests.get(url, headers=headers)
+
+    # Check for errors
+    if not response.ok:
+        raise Exception(f"Failed to fetch add-ons: {response.status_code} {response.text}")
+
+    # Parse JSON response
+    data = response.json()
+    
+    # The API returns a list of all add-ons in the 'addons' key under 'data'
+    all_addons = data.get("data", {}).get("addons", [])
+
+    # Filter for only those that are actually installed
+    installed_addons = [addon for addon in all_addons if addon.get("installed")]
+
+    return installed_addons

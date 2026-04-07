@@ -1,0 +1,6 @@
+#!/usr/bin/with-contenv bashio
+
+bashio::log.info "---------Starting Webserver proxy--------"
+
+
+exec python3 -u /etc/s6-overlay/scripts/webserver_handler.py

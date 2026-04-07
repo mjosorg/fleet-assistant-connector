@@ -1,3 +1,6 @@
+## 2025.04.00
+- Added webserver for request proxying.
+
 ## 2025.10.0
 - Added support for uploading backup via API instead of rsync
   
