@@ -30,8 +30,5 @@ async def fetch_addons():
 @app.get("/health")
 async def health_check():
     return {"status": "online"}
-
-if __name__ == "__main__":
-    # In a Home Assistant Add-on, the internal port is typically 8000 
-    # or whatever you define in your config.yaml
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    
+uvicorn.run(app, host="0.0.0.0", port=8000)
