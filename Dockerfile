@@ -12,6 +12,9 @@ RUN \
     coreutils \
     python3 \
     py3-pip \
-    && pip install --no-cache-dir --break-system-packages requests
+    && pip install --no-cache-dir --break-system-packages requests \
+       requests \
+       fastapi \
+       uvicorn
 
 COPY rootfs /
