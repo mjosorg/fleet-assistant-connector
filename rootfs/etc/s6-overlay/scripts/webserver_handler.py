@@ -30,5 +30,5 @@ async def fetch_addons():
 @app.get("/health")
 async def health_check():
     return {"status": "online"}
-    
-uvicorn.run(app, host="0.0.0.0", port=8000)
+
+uvicorn.run(app, host="0.0.0.0", port=8321)
