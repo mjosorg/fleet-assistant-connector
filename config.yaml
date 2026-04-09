@@ -1,13 +1,15 @@
 name: "Fleet Assistant Connector"
 description: "Fleet assistant connector"
-version: "2026.02.01"
-slug: "fleet_assistant_connector"
+version: "2026.07.09"
+slug: "fleet_assistant_connector_dev"
 init: false
 url: https://github.com/mjosorg/fleet-assistant-connector
 hassio_api: true
 #homeassistant_api: true
 hassio_role: "manager"
 #auth_api: true
+ports:
+  8321/tcp: 8321
 privileged:
   - NET_ADMIN
 map:
