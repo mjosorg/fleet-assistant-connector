@@ -6,7 +6,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 import uvicorn
 
-from helper_backup import create_partial_backup_supervisor, get_backup_stream, delete_backup_from_supervisor, get_installed_addons
+from helper_backup import create_partial_backup_supervisor, get_backup_stream, delete_backup_from_supervisor, get_installed_addons,get_backup_info
 
 app = FastAPI(title="Fleet assistant Supervisor Proxy")
 
@@ -69,6 +69,17 @@ async def create_partial_backup(request: BackupRequest):
     except Exception as e:
         # This catches errors from inside the helper (e.g., connection issues or 401s)
         raise HTTPException(status_code=502, detail=f"Backup Partial Error: {str(e)}")
+
+@app.get("/backup/info/{slug}")
+async def backup_info_endpoint(slug: str):
+    info = get_backup_info(slug)
+    if not info:
+        raise HTTPException(status_code=404, detail="Backup not found yet")
+    return {
+        "status": "ready",
+        "size": info.get("size"),
+        "name": info.get("name")
+    }
 
 @app.get("/backup/download/{slug}")
 async def download_backup_endpoint(slug: str, background_tasks: BackgroundTasks):
