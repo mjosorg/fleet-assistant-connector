@@ -5,20 +5,20 @@ from fastapi import FastAPI, HTTPException
 from helper_backup import get_installed_addons
 import uvicorn
 
-app = FastAPI(title="Home Assistant Supervisor Proxy")
+app = FastAPI(title="Fleet assistant Supervisor Proxy")
 
-@app.get("/proxy/addons")
+@app.get("/apps")
 async def fetch_addons():
     """
     Endpoint that triggers the Supervisor API call via the helper method
     and returns the list of installed add-ons.
     """
     try:
-        addons = get_installed_addons()
+        apps = get_installed_addons()
         return {
             "status": "success",
-            "count": len(addons),
-            "addons": addons
+            "count": len(apps),
+            "apps": apps
         }
     except EnvironmentError as ee:
         # Specifically catch missing Token errors

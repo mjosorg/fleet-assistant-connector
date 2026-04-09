@@ -127,10 +127,8 @@ def get_installed_addons():
     # Parse JSON response
     data = response.json()
     
-    # The API returns a list of all add-ons in the 'addons' key under 'data'
-    all_addons = data.get("data", {}).get("addons", [])
-
-    # Filter for only those that are actually installed
-    installed_addons = [addon for addon in all_addons if addon.get("installed")]
+    # The API returns the list under data -> addons
+    # Since we are calling /addons, everything in this list is an installed addon.
+    installed_addons = data.get("data", {}).get("addons", [])
 
     return installed_addons
