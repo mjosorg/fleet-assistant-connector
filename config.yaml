@@ -1,7 +1,7 @@
 name: "Fleet Assistant Connector"
 description: "Fleet assistant connector"
-version: "2026.04.01"
-slug: "fleet_assistant_connector"
+version: "2026.04.02"
+slug: "fleet_assistant_connector_dev"
 init: false
 url: https://github.com/mjosorg/fleet-assistant-connector
 hassio_api: true
@@ -29,9 +29,7 @@ options:
     port: 51820
     publickey: inputpublickeyfrommaster
     tunnelip: inputtunnelIP
-    enable_backup: false
     installation_id: Installation ID
-    fleet_token: Fleet Token
     fleet_assistant_server_ip: Fleet Assistant Server IP
 
 schema:
@@ -40,7 +38,5 @@ schema:
     port: port
     publickey: str
     tunnelip: str
-    enable_backup: bool
     installation_id: str
-    fleet_token: str
     fleet_assistant_server_ip: str
