@@ -37,7 +37,8 @@ class BackupRequest(BaseModel):
     addons: List[str]
     folders: Optional[List[str]] = ["ssl"]
     homeassistant: Optional[bool] = True
-
+    
+@app.post("/backup/create")
 async def create_partial_backup(request: BackupRequest):
     """
     Triggers a partial backup by calling the supervisor helper.
