@@ -3,6 +3,86 @@ import hashlib
 import requests
 import os 
 
+def create_partial_backup_supervisor(name, selected_slugs, folders=["ssl"], include_ha=True):
+    """
+    Triggers a partial backup via the Home Assistant Supervisor API.
+    """
+    # 1. Get the supervisor token
+    SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
+    if not SUPER_TOKEN:
+        raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
+
+    # 2. Define the Supervisor endpoint for partial backups
+    url = "http://supervisor/backups/new/partial"
+    headers = {
+        "Authorization": f"Bearer {SUPER_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    # 3. Construct the payload
+    payload = {
+        "name": name,
+        "addons": selected_slugs,
+        "homeassistant": include_ha,
+        "folders": folders
+    }
+
+    # 4. Send POST request
+    # Partial backups can take a moment to initialize; 60s timeout is safe.
+    response = requests.post(url, headers=headers, json=payload, timeout=60)
+
+    # 5. Check for errors
+    if not response.ok:
+        raise Exception(f"Partial backup failed: {response.status_code} {response.text}")
+
+    # 6. Parse and return the slug
+    data = response.json()
+    backup_slug = data.get("data", {}).get("slug")
+
+    if not backup_slug:
+        raise ValueError("Supervisor API did not return a backup slug")
+
+    return backup_slug
+
+def get_backup_stream(backup_slug):
+    """
+    Requests the backup stream from Supervisor but does not save it to disk.
+    """
+    SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
+    if not SUPER_TOKEN:
+        raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
+
+    url = f"http://supervisor/backups/{backup_slug}/download"
+    headers = {"Authorization": f"Bearer {SUPER_TOKEN}"}
+
+    # We return the response object itself to be used in a StreamingResponse
+    response = requests.get(url, headers=headers, stream=True)
+    
+    if not response.ok:
+        raise Exception(f"Supervisor download failed: {response.status_code}")
+        
+    return response
+
+def delete_backup_from_supervisor(backup_slug):
+    """
+    Communicates with the Supervisor to delete a specific backup file.
+    """
+    SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
+    if not SUPER_TOKEN:
+        raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
+
+    # The Supervisor API endpoint for deletion
+    url = f"http://supervisor/backups/{backup_slug}"
+    headers = {"Authorization": f"Bearer {SUPER_TOKEN}"}
+
+    # Execute the deletion
+    response = requests.delete(url, headers=headers, timeout=20)
+
+    if not response.ok:
+        raise Exception(f"Supervisor failed to delete {backup_slug}: {response.text}")
+    
+    return True
+    
 def create_backup():
     # Get the supervisor token from environment variable
     SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
