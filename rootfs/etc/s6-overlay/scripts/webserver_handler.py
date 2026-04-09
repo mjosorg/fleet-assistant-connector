@@ -1,18 +1,14 @@
 # This code will run a webserver to handle a request.
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from pydantic import BaseModel
 import uvicorn
 
-from helper_backup import create_partial_backup_supervisor, get_backup_stream, delete_backup_from_supervisor, get_installed_addons,get_backup_info
+from helper_backup import create_partial_backup_supervisor, get_backup_stream, delete_backup_from_supervisor, get_installed_addons
 
 app = FastAPI(title="Fleet assistant Supervisor Proxy")
-
-@app.get("/health")
-async def health_check():
-    return {"status": "online"}
 
 @app.get("/health")
 async def health_check():
@@ -45,7 +41,6 @@ class BackupRequest(BaseModel):
     folders: Optional[List[str]] = ["ssl"]
     homeassistant: Optional[bool] = True
 
-@app.post("/backup/create")
 async def create_partial_backup(request: BackupRequest):
     """
     Triggers a partial backup by calling the supervisor helper.
@@ -70,35 +65,24 @@ async def create_partial_backup(request: BackupRequest):
         # This catches errors from inside the helper (e.g., connection issues or 401s)
         raise HTTPException(status_code=502, detail=f"Backup Partial Error: {str(e)}")
 
-@app.get("/backup/info/{slug}")
-async def backup_info_endpoint(slug: str):
-    info = get_backup_info(slug)
-    if not info:
-        raise HTTPException(status_code=404, detail="Backup not found yet")
-    return {
-        "status": "ready",
-        "size": info.get("size"),
-        "name": info.get("name")
-    }
-
 @app.get("/backup/download/{slug}")
-async def download_backup_endpoint(slug: str, background_tasks: BackgroundTasks):
+async def download_backup_endpoint(slug: str):
+    """
+    Endpoint to download a backup file by its slug.
+    """
     try:
-        # Get the response object from requests
+        # Get the active stream from the supervisor
         supervisor_response = get_backup_stream(slug)
 
-        # Define a cleanup task to close the requests response once streaming is done
-        background_tasks.add_task(supervisor_response.close)
-
+        # We wrap the supervisor's content iterator in a FastAPI StreamingResponse
         return StreamingResponse(
             supervisor_response.iter_content(chunk_size=8192),
             media_type="application/x-tar",
             headers={
-                "Content-Disposition": f"attachment; filename=backup_{slug}.tar",
-                # Help the client know how much is coming
-                "Content-Length": supervisor_response.headers.get("Content-Length", "")
+                "Content-Disposition": f"attachment; filename=backup_{slug}.tar"
             }
         )
+
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Download Error: {str(e)}")
 
@@ -122,5 +106,4 @@ async def delete_backup_endpoint(slug: str):
         # which will be caught and reported here.
         raise HTTPException(status_code=502, detail=f"Delete Error: {str(e)}")
 
-uvicorn.run(app, host="0.0.0.0", port=8321, log_level="warning")
 uvicorn.run(app, host="0.0.0.0", port=8321, log_level="warning")
