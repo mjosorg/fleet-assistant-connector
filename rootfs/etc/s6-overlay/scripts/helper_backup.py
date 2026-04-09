@@ -45,18 +45,13 @@ def create_partial_backup_supervisor(name, selected_slugs, folders=["ssl"], incl
     return backup_slug
 
 def get_backup_stream(backup_slug):
-    """
-    Requests the backup stream from Supervisor but does not save it to disk.
-    """
-    SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
-    if not SUPER_TOKEN:
-        raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
-
+    token = os.environ.get("SUPERVISOR_TOKEN")
     url = f"http://supervisor/backups/{backup_slug}/download"
-    headers = {"Authorization": f"Bearer {SUPER_TOKEN}"}
+    headers = {"Authorization": f"Bearer {token}"}
 
-    # We return the response object itself to be used in a StreamingResponse
-    response = requests.get(url, headers=headers, stream=True)
+    # IMPORTANT: We do not use a 'with' block here because 
+    # we need the connection to stay open for FastAPI to stream it.
+    response = requests.get(url, headers=headers, stream=True, timeout=None)
     
     if not response.ok:
         raise Exception(f"Supervisor download failed: {response.status_code}")
@@ -82,7 +77,7 @@ def delete_backup_from_supervisor(backup_slug):
         raise Exception(f"Supervisor failed to delete {backup_slug}: {response.text}")
     
     return True
-    
+
 def create_backup():
     # Get the supervisor token from environment variable
     SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
