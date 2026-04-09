@@ -37,7 +37,7 @@ class BackupRequest(BaseModel):
     addons: List[str]
     folders: Optional[List[str]] = ["ssl"]
     homeassistant: Optional[bool] = True
-    
+
 @app.post("/backup/create")
 async def create_partial_backup(request: BackupRequest):
     """
@@ -64,23 +64,23 @@ async def create_partial_backup(request: BackupRequest):
         raise HTTPException(status_code=502, detail=f"Backup Partial Error: {str(e)}")
 
 @app.get("/backup/download/{slug}")
-async def download_backup_endpoint(slug: str):
-    """
-    Endpoint to download a backup file by its slug.
-    """
+async def download_backup_endpoint(slug: str, background_tasks: BackgroundTasks):
     try:
-        # Get the active stream from the supervisor
+        # Get the response object from requests
         supervisor_response = get_backup_stream(slug)
 
-        # We wrap the supervisor's content iterator in a FastAPI StreamingResponse
+        # Define a cleanup task to close the requests response once streaming is done
+        background_tasks.add_task(supervisor_response.close)
+
         return StreamingResponse(
             supervisor_response.iter_content(chunk_size=8192),
             media_type="application/x-tar",
             headers={
-                "Content-Disposition": f"attachment; filename=backup_{slug}.tar"
+                "Content-Disposition": f"attachment; filename=backup_{slug}.tar",
+                # Help the client know how much is coming
+                "Content-Length": supervisor_response.headers.get("Content-Length", "")
             }
         )
-
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Download Error: {str(e)}")
 
