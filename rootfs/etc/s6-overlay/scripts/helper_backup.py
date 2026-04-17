@@ -150,8 +150,22 @@ def get_backup_stream(backup_slug: str):
     response.raise_for_status()
     return response
 
-def get_backup_info(backup_slug: str) -> Optional[dict]:
-    """Queries the Supervisor directly for backup metadata. Returns None if not found."""
+    # Construct the download URL
+    url = f"http://supervisor/backups/{backup_slug}/download"
+    headers = {"Authorization": f"Bearer {SUPER_TOKEN}"}
+
+    # Stream the download to a file
+    with requests.get(url, headers=headers, stream=True) as response:
+        if not response.ok:
+            raise Exception(f"Download failed: {response.status_code} {response.text}")
+
+        with open(file_name, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:  # filter out keep-alive chunks
+                    f.write(chunk)
+
+
+def cleanup(backup_slug):
     try:
         response = requests.get(
             f"{SUPERVISOR_BASE_URL}/backups/{backup_slug}/info",
