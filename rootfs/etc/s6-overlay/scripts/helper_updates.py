@@ -35,24 +35,6 @@ def check_update_available():
         return {"error": f"Problem occured: {str(e)}"}
 
 
-def upload_updates(FleetAssistantServerIP, FleetToken, Installation_id, update_status):
-    # Upload to fleet assistant admin server
-    url = f"http://{FleetAssistantServerIP}:8000/ha_upload_updates"
-
-    headers = {
-        "X-Token": FleetToken
-    }
-    params = {"installation_id": Installation_id}
-
-
-    r = requests.post(url, headers=headers, params=params, json=update_status)
-        
-    if r.status_code == 200:
-        return True
-    else:
-        print(f"Upload of version status failed with status code {r.status_code} and response: {r.json()}")
-        return False
-
 def get_fleet_assistant_version():
     """Henter nåværende versjon av addonen via Supervisor API."""
     

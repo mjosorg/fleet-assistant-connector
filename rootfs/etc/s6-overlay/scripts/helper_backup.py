@@ -139,36 +139,6 @@ def download_backup(backup_slug, file_name):
                     f.write(chunk)
 
 
-def upload_backup(FleetAssistantServerIP, FleetToken, Installation_id, filename):
-    # Upload to fleet assistant admin server
-    url = f"http://{FleetAssistantServerIP}:8000/ha_upload_backup"
-
-
-    # Calculate hash before sending
-    sha256 = hashlib.sha256()
-    with open(filename, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            sha256.update(chunk)
-    expected_hash = sha256.hexdigest()
-
-    headers = {
-        "X-Filename": os.path.basename(filename),
-        "X-Checksum-Sha256": expected_hash,
-        "X-Token": FleetToken
-    }
-    params = {"installation_id": Installation_id}
-
-    with open(filename, "rb") as f:
-        r = requests.post(url, data=f, headers=headers, params=params)
-        
-    if r.status_code == 200:
-        return True
-    else:
-        print(f"Upload failed with status code {r.status_code} and response: {r.json()}")
-        return False
-
-
-
 def cleanup(backup_slug):
     try:
         # Delete backup from supervisor
