@@ -91,110 +91,35 @@ def delete_backup_from_supervisor(backup_slug):
     
     return True
 
-def create_backup():
+        
+def get_installed_addons():
+    """
+    Fetches the list of installed add-ons from the Home Assistant Supervisor API.
+    """
     # Get the supervisor token from environment variable
     SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
     if not SUPER_TOKEN:
         raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
-    return token
 
-def _auth_headers(content_type: bool = False) -> dict:
-    """Build standard auth headers, optionally with Content-Type."""
-    headers = {"Authorization": f"Bearer {_get_token()}"}
-    if content_type:
-        headers["Content-Type"] = "application/json"
-    return headers
-
-def create_partial_backup_supervisor(
-    name: str,
-    selected_slugs: list,
-    folders: Optional[list] = None,
-    include_ha: bool = True
-) -> str:
-    """Triggers a partial backup via the Home Assistant Supervisor API."""
-    if folders is None:
-        folders = ["ssl"]  # Avoid mutable default argument
-
-    payload = {
-        "name": name,
-        "addons": selected_slugs,
-        "homeassistant": include_ha,
-        "folders": folders
+    # Define the endpoint for add-ons
+    url = "http://supervisor/addons"
+    headers = {
+        "Authorization": f"Bearer {SUPER_TOKEN}",
+        "Content-Type": "application/json"
     }
 
-    response = requests.post(
-        f"{SUPERVISOR_BASE_URL}/backups/new/partial",
-        headers=_auth_headers(content_type=True),
-        json=payload,
-        timeout=60
-    )
-    response.raise_for_status()  # Raises HTTPError with status code automatically
+    # Send GET request to fetch add-on data
+    response = requests.get(url, headers=headers)
 
-    backup_slug = response.json().get("data", {}).get("slug")
-    if not backup_slug:
-        raise ValueError("Supervisor API did not return a backup slug")
+    # Check for errors
+    if not response.ok:
+        raise Exception(f"Failed to fetch add-ons: {response.status_code} {response.text}")
 
-    return backup_slug
+    # Parse JSON response
+    data = response.json()
+    
+    # The API returns the list under data -> addons
+    # Since we are calling /addons, everything in this list is an installed addon.
+    installed_addons = data.get("data", {}).get("addons", [])
 
-def get_backup_stream(backup_slug: str):
-    """
-    Returns an open streaming response for the given backup.
-    IMPORTANT: Caller is responsible for closing the response when done.
-    """
-    response = requests.get(
-        f"{SUPERVISOR_BASE_URL}/backups/{backup_slug}/download",
-        headers=_auth_headers(),
-        stream=True,
-        timeout=None
-    )
-    response.raise_for_status()
-    return response
-
-    # Construct the download URL
-    url = f"http://supervisor/backups/{backup_slug}/download"
-    headers = {"Authorization": f"Bearer {SUPER_TOKEN}"}
-
-    # Stream the download to a file
-    with requests.get(url, headers=headers, stream=True) as response:
-        if not response.ok:
-            raise Exception(f"Download failed: {response.status_code} {response.text}")
-
-        with open(file_name, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                if chunk:  # filter out keep-alive chunks
-                    f.write(chunk)
-
-
-def cleanup(backup_slug):
-    try:
-        response = requests.get(
-            f"{SUPERVISOR_BASE_URL}/backups/{backup_slug}/info",
-            headers=_auth_headers(),
-            timeout=10
-        )
-        response.raise_for_status()
-        return response.json().get("data")
-    except requests.HTTPError:
-        return None  # Backup not found or not ready
-    except requests.RequestException as e:
-        raise RuntimeError(f"Failed to fetch backup info for {backup_slug}: {e}") from e
-
-def delete_backup_from_supervisor(backup_slug: str) -> bool:
-    """Permanently deletes a backup from Home Assistant."""
-    response = requests.delete(
-        f"{SUPERVISOR_BASE_URL}/backups/{backup_slug}",
-        headers=_auth_headers(),
-        timeout=20
-    )
-    response.raise_for_status()
-    return True
-
-def get_installed_addons() -> list:
-    """Fetches the list of installed add-ons from the Home Assistant Supervisor API."""
-    response = requests.get(
-        f"{SUPERVISOR_BASE_URL}/addons",
-        headers=_auth_headers(),
-        timeout=30
-    )
-    response.raise_for_status()
-    return response.json().get("data", {}).get("addons", [])
+    return installed_addons
