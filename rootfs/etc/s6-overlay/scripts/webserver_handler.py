@@ -18,6 +18,7 @@ from helper_backup import (
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Fleet Assistant Supervisor Proxy")
+logger.warning("Webserver proxy starting up")
 
 # --- Slug validation ---
 SLUG_PATTERN = re.compile(r'^[a-f0-9]{8}$')
