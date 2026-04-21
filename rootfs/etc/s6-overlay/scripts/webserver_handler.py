@@ -1,25 +1,50 @@
-# This code will run a webserver to handle a request.
-
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+import re
+import logging
+import requests
+from fastapi import FastAPI, HTTPException, BackgroundTasks, status
 from fastapi.responses import StreamingResponse
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import uvicorn
 
-from helper_backup import create_partial_backup_supervisor, get_backup_stream, delete_backup_from_supervisor, get_installed_addons,get_backup_info
+from helper_backup import (
+    create_partial_backup_supervisor,
+    get_backup_stream,
+    delete_backup_from_supervisor,
+    get_installed_addons,
+    get_backup_info
+)
 
-app = FastAPI(title="Fleet assistant Supervisor Proxy")
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="Fleet Assistant Supervisor Proxy")
+
+# --- Slug validation ---
+SLUG_PATTERN = re.compile(r'^[a-f0-9]{8}$')
+
+def validate_slug(slug: str) -> str:
+    """Ensures the slug is a valid 8-char hex string before passing to Supervisor."""
+    if not SLUG_PATTERN.match(slug):
+        raise HTTPException(status_code=400, detail="Invalid backup slug format")
+    return slug
+
+# --- Models ---
+class BackupRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    addons: List[str]
+    folders: Optional[List[str]] = None
+    homeassistant: Optional[bool] = True
+
+# --- Routes ---
 
 @app.get("/health")
 async def health_check():
     return {"status": "online"}
 
+
 @app.get("/apps")
 async def fetch_addons():
-    """
-    Endpoint that triggers the Supervisor API call via the helper method
-    and returns the list of installed add-ons.
-    """
+    """Returns the list of installed Home Assistant add-ons."""
     try:
         apps = get_installed_addons()
         return {
@@ -27,63 +52,57 @@ async def fetch_addons():
             "count": len(apps),
             "apps": apps
         }
-    except EnvironmentError as ee:
-        # Specifically catch missing Token errors
-        raise HTTPException(status_code=500, detail=str(ee))
-    except Exception as e:
-        # Catch connection errors or API failures
-        raise HTTPException(status_code=502, detail=f"Supervisor API Error: {str(e)}")
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
 
-
-class BackupRequest(BaseModel):
-    name: str
-    addons: List[str]
-    folders: Optional[List[str]] = ["ssl"]
-    homeassistant: Optional[bool] = True
 
 @app.post("/backup/create")
 async def create_partial_backup(request: BackupRequest):
-    """
-    Triggers a partial backup by calling the supervisor helper.
-    """
+    """Triggers a partial backup via the Supervisor."""
     try:
-        # We pass the individual fields directly to the helper.
-        # The helper builds the payload and sends the request.
         backup_slug = create_partial_backup_supervisor(
-            name=request.name, 
-            selected_slugs=request.addons, 
-            folders=request.folders, 
+            name=request.name,
+            selected_slugs=request.addons,
+            folders=request.folders,
             include_ha=request.homeassistant
         )
-        
         return {
             "status": "success",
             "slug": backup_slug,
             "message": f"Partial backup '{request.name}' started"
         }
-        
-    except Exception as e:
-        # This catches errors from inside the helper (e.g., connection issues or 401s)
-        raise HTTPException(status_code=502, detail=f"Backup Partial Error: {str(e)}")
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
 
 @app.get("/backup/info/{slug}")
 async def backup_info_endpoint(slug: str):
+    """Returns metadata for a specific backup. Returns 202 if not ready yet."""
+    validate_slug(slug)
     info = get_backup_info(slug)
     if not info:
-        raise HTTPException(status_code=404, detail="Backup not found yet")
+        raise HTTPException(status_code=202, detail="Backup not ready yet, try again shortly")
     return {
         "status": "ready",
         "size": info.get("size"),
         "name": info.get("name")
     }
 
+
 @app.get("/backup/download/{slug}")
 async def download_backup_endpoint(slug: str, background_tasks: BackgroundTasks):
+    """Streams a backup file directly from the Supervisor."""
+    validate_slug(slug)
     try:
-        # Get the response object from requests
         supervisor_response = get_backup_stream(slug)
-
-        # Define a cleanup task to close the requests response once streaming is done
         background_tasks.add_task(supervisor_response.close)
 
         return StreamingResponse(
@@ -91,32 +110,34 @@ async def download_backup_endpoint(slug: str, background_tasks: BackgroundTasks)
             media_type="application/x-tar",
             headers={
                 "Content-Disposition": f"attachment; filename=backup_{slug}.tar",
-                # Help the client know how much is coming
                 "Content-Length": supervisor_response.headers.get("Content-Length", "")
             }
         )
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Download Error: {str(e)}")
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
 
 @app.delete("/backup/delete/{slug}")
 async def delete_backup_endpoint(slug: str):
-    """
-    Endpoint to permanently delete a backup from the Home Assistant system.
-    """
+    """Permanently deletes a backup from Home Assistant."""
+    validate_slug(slug)
     try:
-        # Trigger the supervisor deletion logic
         delete_backup_from_supervisor(slug)
-        
         return {
             "status": "success",
             "slug": slug,
             "message": "Backup successfully removed from storage."
         }
-        
-    except Exception as e:
-        # If the slug doesn't exist, Supervisor returns a 404, 
-        # which will be caught and reported here.
-        raise HTTPException(status_code=502, detail=f"Delete Error: {str(e)}")
+    except requests.HTTPError as e:
+        status_code = e.response.status_code
+        if status_code == 404:
+            raise HTTPException(status_code=404, detail=f"Backup {slug} not found")
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8321, log_level="warning")
