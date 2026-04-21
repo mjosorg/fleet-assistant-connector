@@ -1,4 +1,3 @@
 #!/usr/bin/with-contenv bashio
 
-bashio::log.info "Starting webserver_proxy PID=$$"
 exec python3 -u /etc/s6-overlay/scripts/webserver_handler.py
