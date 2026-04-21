@@ -13,7 +13,6 @@ RUN \
     python3 \
     py3-pip \
     && pip install --no-cache-dir --break-system-packages requests \
-       requests \
        fastapi \
        uvicorn
 

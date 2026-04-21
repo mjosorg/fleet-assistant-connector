@@ -118,4 +118,5 @@ async def delete_backup_endpoint(slug: str):
         # which will be caught and reported here.
         raise HTTPException(status_code=502, detail=f"Delete Error: {str(e)}")
 
-uvicorn.run(app, host="0.0.0.0", port=8321, log_level="warning")
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8321, log_level="warning")
