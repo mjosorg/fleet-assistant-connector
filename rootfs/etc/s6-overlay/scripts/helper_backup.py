@@ -2,14 +2,18 @@ import requests
 import os
 from typing import Optional
 
+def _get_token() -> str:
+    token = os.environ.get("SUPERVISOR_TOKEN")
+    if not token:
+        raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
+    return token
+
 def create_partial_backup_supervisor(name, selected_slugs, folders=["ssl"], include_ha=True):
     """
     Triggers a partial backup via the Home Assistant Supervisor API.
     """
     # 1. Get the supervisor token
-    SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
-    if not SUPER_TOKEN:
-        raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
+    SUPER_TOKEN = _get_token()
 
     # 2. Define the Supervisor endpoint for partial backups
     url = "http://supervisor/backups/new/partial"
@@ -44,7 +48,8 @@ def create_partial_backup_supervisor(name, selected_slugs, folders=["ssl"], incl
     return backup_slug
 
 def get_backup_stream(backup_slug):
-    token = os.environ.get("SUPERVISOR_TOKEN")
+    token = _get_token()
+
     url = f"http://supervisor/backups/{backup_slug}/download"
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -59,7 +64,8 @@ def get_backup_stream(backup_slug):
     
 def get_backup_info(backup_slug):
     """Queries the Supervisor directly for backup metadata."""
-    token = os.environ.get("SUPERVISOR_TOKEN")
+    token = _get_token()
+
     url = f"http://supervisor/backups/{backup_slug}/info"
     headers = {"Authorization": f"Bearer {token}"}
     
@@ -75,9 +81,7 @@ def delete_backup_from_supervisor(backup_slug):
     """
     Communicates with the Supervisor to delete a specific backup file.
     """
-    SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
-    if not SUPER_TOKEN:
-        raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
+    SUPER_TOKEN = _get_token()
 
     # The Supervisor API endpoint for deletion
     url = f"http://supervisor/backups/{backup_slug}"
@@ -97,9 +101,7 @@ def get_installed_addons():
     Fetches the list of installed add-ons from the Home Assistant Supervisor API.
     """
     # Get the supervisor token from environment variable
-    SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
-    if not SUPER_TOKEN:
-        raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
+    SUPER_TOKEN = _get_token()
 
     # Define the endpoint for add-ons
     url = "http://supervisor/addons"
@@ -109,7 +111,7 @@ def get_installed_addons():
     }
 
     # Send GET request to fetch add-on data
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=30)
 
     # Check for errors
     if not response.ok:
