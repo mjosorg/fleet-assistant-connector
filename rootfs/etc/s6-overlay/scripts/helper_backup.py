@@ -58,7 +58,7 @@ def get_backup_stream(backup_slug: str):
         f"{SUPERVISOR_BASE_URL}/backups/{backup_slug}/download",
         headers=_auth_headers(),
         stream=True,
-        timeout=None
+        timeout=480
     )
     response.raise_for_status()
     return response
@@ -73,11 +73,12 @@ def get_backup_info(backup_slug: str) -> Optional[dict]:
         )
         response.raise_for_status()
         return response.json().get("data")
-    except requests.HTTPError:
-        return None  # Backup not found or not ready
-    except requests.RequestException as e:
-        raise RuntimeError(f"Failed to fetch backup info for {backup_slug}: {e}") from e
 
+    except requests.HTTPError as e:
+        if e.response.status_code == 404:
+            return None
+        raise  # Re-raise 5xx and other unexpected errors
+        
 def delete_backup_from_supervisor(backup_slug: str) -> bool:
     """Permanently deletes a backup from Home Assistant."""
     response = requests.delete(

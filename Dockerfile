@@ -6,7 +6,6 @@ FROM $BUILD_FROM
 RUN \
   apk add --no-cache \
     wireguard-tools \
-    nano \
     jq \
     nftables \
     coreutils \

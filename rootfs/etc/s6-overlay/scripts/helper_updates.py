@@ -1,5 +1,8 @@
 import requests
 import os
+from helper_backup import _get_token
+
+SUPERVISOR_BASE_URL = "http://supervisor"
 
 def check_update_available():
     # Get the supervisor token from environment variable
@@ -8,24 +11,18 @@ def check_update_available():
     ## {"result":"ok","data":{"available_updates":[{"update_type":"core","panel_path":"/update-available/core","version_latest":"2026.1.3"}]}}
     ##
 
-    SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
-    if not SUPER_TOKEN:
-        raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
+    token = _get_token()
 
-    # Define the endpoint
-    url = "http://supervisor/available_updates"
-    headers = {"Authorization": f"Bearer {SUPER_TOKEN}"}
+    url = f"{SUPERVISOR_BASE_URL}/available_updates"
+    headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        # Sender GET-forespørsel
         response = requests.get(url, headers=headers, timeout=10)
         
-        # Sjekker om forespørselen var vellykket (200 OK)
         response.raise_for_status()
         
         data = response.json()
-        
-        # Eksempel på hvordan man tolker dataen for å matche ditt ønskede format
+
         if data.get("result") == "ok":
             return data["data"]
             
@@ -36,24 +33,21 @@ def check_update_available():
 
 
 def get_fleet_assistant_version():
-    """Henter nåværende versjon av addonen via Supervisor API."""
+    """Collecting the current version of the add-on via Supervisor API."""
     
-    SUPER_TOKEN = os.environ.get("SUPERVISOR_TOKEN")
-    if not SUPER_TOKEN:
-        raise EnvironmentError("SUPERVISOR_TOKEN environment variable not set")
+    token = _get_token()
 
-    url = "http://supervisor/addons/self/info"
-    headers = {"Authorization": f"Bearer {SUPER_TOKEN}"}
+    url = f"{SUPERVISOR_BASE_URL}/addons/self/info"
+    headers = {"Authorization": f"Bearer {token}"}
     
     try:
         response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()  # Kaster feil ved 4xx eller 5xx statuskoder
+        response.raise_for_status()  
         
         data = response.json()
         
-        # Henter ut versjonen fra 'data'-objektet
         return data.get("data", {}).get("version")
         
     except requests.exceptions.RequestException as e:
-        print(f"Kunne ikke hente versjon: {e}")
+        print(f"Unable to fetch version: {e}")
         return None

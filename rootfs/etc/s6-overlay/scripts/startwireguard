@@ -5,8 +5,6 @@
 # ==============================================================================
 declare interface
 
-#s6-svc -O /run/service/wireguard
-
 bashio::log.info "Starting WireGuard..."
 
 # Get the interface
