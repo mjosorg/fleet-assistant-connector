@@ -26,7 +26,7 @@ def create_partial_backup_supervisor(
 ) -> str:
     """Triggers a partial backup via the Home Assistant Supervisor API."""
     if folders is None:
-        folders = ["ssl"]  # Avoid mutable default argument
+        folders = ["ssl"]
 
     payload = {
         "name": name,
@@ -79,7 +79,7 @@ def get_backup_info(backup_slug: str) -> Optional[dict]:
             return None
         raise  # Re-raise 5xx and other unexpected errors
         
-def delete_backup_from_supervisor(backup_slug: str) -> bool:
+def delete_backup_from_supervisor(backup_slug: str) -> None:
     """Permanently deletes a backup from Home Assistant."""
     response = requests.delete(
         f"{SUPERVISOR_BASE_URL}/backups/{backup_slug}",
@@ -87,7 +87,6 @@ def delete_backup_from_supervisor(backup_slug: str) -> bool:
         timeout=20
     )
     response.raise_for_status()
-    return True
 
 def get_installed_addons() -> list:
     """Fetches the list of installed add-ons from the Home Assistant Supervisor API."""

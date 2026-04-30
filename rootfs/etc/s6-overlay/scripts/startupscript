@@ -38,15 +38,13 @@ if ! bashio::fs.file_exists "${config_dir}/private_key"; then
 fi
 peer_private_key=$(<"${config_dir}/private_key")
 
-# Get the public, create key if not exists
+# Get the public key, deriving it from the private key if not yet stored
 if ! bashio::fs.file_exists "${config_dir}/public_key"; then
-    peer_public_key=""
-    bashio::var.has_value "${peer_private_key}";
     peer_public_key=$(wg pubkey <<< "${peer_private_key}")
     echo "$peer_public_key" > "${config_dir}/public_key"
     bashio::log.info "Public key= $peer_public_key"
-
 fi
+peer_public_key=$(<"${config_dir}/public_key")
 # Get config input from addon UI
 if bashio::config.has_value "server.publickey"; then
     publickey=$(bashio::config "server.publickey")
@@ -84,12 +82,8 @@ echo ""
 } > "${config_dir}/${clientname}.conf"
 
 
-# Move config file to /etc/wireguard if the file does not exist
-if ! bashio::fs.file_exists "/etc/wireguard/${clientname}.conf"; then
-    cp "${config_dir}/${clientname}.conf" "/etc/wireguard/${clientname}.conf" ||
-        bashio::exit.nok "Unable to move config file to /etc/wireguard"
-fi
+# Always sync config to /etc/wireguard so changes take effect on restart
+cp "${config_dir}/${clientname}.conf" "/etc/wireguard/${clientname}.conf" ||
+    bashio::exit.nok "Unable to copy config file to /etc/wireguard"
 
-# Print the public key to the log
-pubkey=$(cat "${config_dir}/public_key")
-bashio::log.info "The wireguard public key is: $pubkey"
+bashio::log.info "The wireguard public key is: ${peer_public_key}"

@@ -1,7 +1,7 @@
 import re
 import logging
 import requests
-from fastapi import FastAPI, HTTPException, BackgroundTasks, status
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from pydantic import BaseModel, Field
@@ -18,7 +18,6 @@ from helper_backup import (
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Fleet Assistant Supervisor Proxy")
-logger.warning("Webserver proxy starting up")
 
 # --- Slug validation ---
 SLUG_PATTERN = re.compile(r'^[a-f0-9]{8}$')
@@ -78,6 +77,8 @@ async def create_partial_backup(request: BackupRequest):
         }
     except EnvironmentError as e:
         raise HTTPException(status_code=500, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
     except requests.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
@@ -88,7 +89,12 @@ async def create_partial_backup(request: BackupRequest):
 async def backup_info_endpoint(slug: str):
     """Returns metadata for a specific backup. Returns 202 if not ready yet."""
     validate_slug(slug)
-    info = get_backup_info(slug)
+    try:
+        info = get_backup_info(slug)
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
     if not info:
         raise HTTPException(status_code=202, detail="Backup not ready yet, try again shortly")
     return {
@@ -141,4 +147,5 @@ async def delete_backup_endpoint(slug: str):
 
 
 if __name__ == "__main__":
+    logger.warning("Webserver proxy starting up")
     uvicorn.run(app, host="0.0.0.0", port=8321, log_level="warning")

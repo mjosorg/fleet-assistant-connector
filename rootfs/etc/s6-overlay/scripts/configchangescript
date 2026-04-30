@@ -1,6 +1,6 @@
 #!/command/with-contenv bashio
 # ==============================================================================
-# Home Assistant Add-on: m-connect
+# Home Assistant Add-on: Fleet Assistant Connector
 # Adds trusted proxy and forward for header to HA config file.
 # This is only for first time startup of the addon.
 # ==============================================================================
