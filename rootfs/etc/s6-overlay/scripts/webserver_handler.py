@@ -246,14 +246,13 @@ async def trigger_all_updates():
     failed = []
 
     UPDATE_HANDLERS = {
-        "homeassistant": ("core", update_core),
+        "core": ("core", update_core),
         "os": ("os", update_os),
         "supervisor": ("supervisor", update_supervisor),
     }
 
     for item in updates:
         update_type = item.get("update_type")
-        identifier = item.get("identifier", update_type)
 
         if update_type in UPDATE_HANDLERS:
             label, handler = UPDATE_HANDLERS[update_type]
@@ -264,9 +263,10 @@ async def trigger_all_updates():
                 failed.append({"component": label, "error": str(e)})
 
         elif update_type == "addon":
-            addon_slug = item.get("identifier", "")
+            panel_path = item.get("panel_path", "")
+            addon_slug = panel_path.rstrip("/").split("/")[-1]
             if not ADDON_SLUG_PATTERN.match(addon_slug):
-                failed.append({"component": addon_slug, "error": "Invalid slug returned by Supervisor"})
+                failed.append({"component": addon_slug, "error": "Invalid slug in panel_path"})
                 continue
             try:
                 update_addon(addon_slug)

@@ -14,7 +14,7 @@ def get_available_updates() -> list:
         timeout=10
     )
     response.raise_for_status()
-    return response.json().get("data", [])
+    return response.json().get("data", {}).get("available_updates", [])
 
 
 def update_core(version: Optional[str] = None) -> None:
