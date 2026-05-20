@@ -64,12 +64,12 @@ async def fetch_addons():
             "count": len(apps),
             "apps": apps
         }
-    except EnvironmentError as e:
-        raise HTTPException(status_code=500, detail=str(e))
     except requests.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/backup/create")
@@ -87,14 +87,14 @@ async def create_partial_backup(request: BackupRequest):
             "slug": backup_slug,
             "message": f"Partial backup '{request.name}' started"
         }
-    except EnvironmentError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=502, detail=str(e))
     except requests.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/backup/info/{slug}")
@@ -164,12 +164,12 @@ async def fetch_available_updates():
     try:
         updates = get_available_updates()
         return {"status": "success", "updates": updates}
-    except EnvironmentError as e:
-        raise HTTPException(status_code=500, detail=str(e))
     except requests.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/updates/core")
@@ -178,12 +178,12 @@ async def trigger_core_update():
     try:
         update_core()
         return {"status": "success", "message": "Home Assistant Core update triggered"}
-    except EnvironmentError as e:
-        raise HTTPException(status_code=500, detail=str(e))
     except requests.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/updates/os")
@@ -192,12 +192,12 @@ async def trigger_os_update():
     try:
         update_os()
         return {"status": "success", "message": "Home Assistant OS update triggered"}
-    except EnvironmentError as e:
-        raise HTTPException(status_code=500, detail=str(e))
     except requests.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/updates/supervisor")
@@ -206,12 +206,12 @@ async def trigger_supervisor_update():
     try:
         update_supervisor()
         return {"status": "success", "message": "Supervisor update triggered"}
-    except EnvironmentError as e:
-        raise HTTPException(status_code=500, detail=str(e))
     except requests.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/updates/addon/{slug}")
@@ -221,8 +221,6 @@ async def trigger_addon_update(slug: str):
     try:
         update_addon(slug)
         return {"status": "success", "message": f"Update triggered for add-on '{slug}'"}
-    except EnvironmentError as e:
-        raise HTTPException(status_code=500, detail=str(e))
     except requests.HTTPError as e:
         status_code = e.response.status_code
         if status_code == 404:
@@ -230,6 +228,8 @@ async def trigger_addon_update(slug: str):
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {status_code}")
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/updates/all")

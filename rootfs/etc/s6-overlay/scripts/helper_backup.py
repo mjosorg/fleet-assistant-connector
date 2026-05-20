@@ -39,7 +39,7 @@ def create_partial_backup_supervisor(
         f"{SUPERVISOR_BASE_URL}/backups/new/partial",
         headers=_auth_headers(content_type=True),
         json=payload,
-        timeout=60
+        timeout=180
     )
     response.raise_for_status()  # Raises HTTPError with status code automatically
 
