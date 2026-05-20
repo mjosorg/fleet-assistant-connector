@@ -1,4 +1,7 @@
 name: "Fleet Assistant Connector"
+description: "Fleet assistant connector [DEV]"
+version: "2026.05.06"
+slug: "fleet_assistant_connector_dev"
 description: "Fleet assistant connector"
 version: "2026.05.05"
 slug: "fleet_assistant_connector"

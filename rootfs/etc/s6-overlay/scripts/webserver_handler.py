@@ -172,69 +172,46 @@ async def fetch_available_updates():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/updates/core")
-async def trigger_core_update():
-    """Triggers a Home Assistant Core update."""
+def _run_update(fn, *args):
+    """Runs an update function and logs any error (used as a BackgroundTask)."""
     try:
-        update_core()
-        return {"status": "success", "message": "Home Assistant Core update triggered"}
-    except requests.HTTPError as e:
-        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
-    except requests.RequestException as e:
-        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
-    except EnvironmentError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        fn(*args)
+    except Exception as e:
+        logger.error("Background update failed (%s %s): %s", fn.__name__, args, e)
+
+
+@app.post("/updates/core")
+async def trigger_core_update(background_tasks: BackgroundTasks):
+    """Triggers a Home Assistant Core update (fire-and-forget)."""
+    background_tasks.add_task(_run_update, update_core)
+    return {"status": "triggered", "message": "Home Assistant Core update started"}
 
 
 @app.post("/updates/os")
-async def trigger_os_update():
-    """Triggers a Home Assistant OS update."""
-    try:
-        update_os()
-        return {"status": "success", "message": "Home Assistant OS update triggered"}
-    except requests.HTTPError as e:
-        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
-    except requests.RequestException as e:
-        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
-    except EnvironmentError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def trigger_os_update(background_tasks: BackgroundTasks):
+    """Triggers a Home Assistant OS update (fire-and-forget)."""
+    background_tasks.add_task(_run_update, update_os)
+    return {"status": "triggered", "message": "Home Assistant OS update started"}
 
 
 @app.post("/updates/supervisor")
-async def trigger_supervisor_update():
-    """Triggers a Home Assistant Supervisor update."""
-    try:
-        update_supervisor()
-        return {"status": "success", "message": "Supervisor update triggered"}
-    except requests.HTTPError as e:
-        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
-    except requests.RequestException as e:
-        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
-    except EnvironmentError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def trigger_supervisor_update(background_tasks: BackgroundTasks):
+    """Triggers a Home Assistant Supervisor update (fire-and-forget)."""
+    background_tasks.add_task(_run_update, update_supervisor)
+    return {"status": "triggered", "message": "Supervisor update started"}
 
 
 @app.post("/updates/addon/{slug}")
-async def trigger_addon_update(slug: str):
-    """Triggers an update for a specific add-on by slug."""
+async def trigger_addon_update(slug: str, background_tasks: BackgroundTasks):
+    """Triggers an update for a specific add-on by slug (fire-and-forget)."""
     validate_addon_slug(slug)
-    try:
-        update_addon(slug)
-        return {"status": "success", "message": f"Update triggered for add-on '{slug}'"}
-    except requests.HTTPError as e:
-        status_code = e.response.status_code
-        if status_code == 404:
-            raise HTTPException(status_code=404, detail=f"Add-on '{slug}' not found")
-        raise HTTPException(status_code=502, detail=f"Supervisor API error: {status_code}")
-    except requests.RequestException as e:
-        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
-    except EnvironmentError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    background_tasks.add_task(_run_update, update_addon, slug)
+    return {"status": "triggered", "message": f"Update started for add-on '{slug}'"}
 
 
 @app.post("/updates/all")
-async def trigger_all_updates():
-    """Triggers updates for all available components (OS, Core, Supervisor, add-ons)."""
+async def trigger_all_updates(background_tasks: BackgroundTasks):
+    """Triggers updates for all available components (fire-and-forget)."""
     try:
         updates = get_available_updates()
     except EnvironmentError as e:
@@ -242,43 +219,26 @@ async def trigger_all_updates():
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
 
-    triggered = []
-    failed = []
-
     UPDATE_HANDLERS = {
-        "core": ("core", update_core),
-        "os": ("os", update_os),
-        "supervisor": ("supervisor", update_supervisor),
+        "core": update_core,
+        "os": update_os,
+        "supervisor": update_supervisor,
     }
 
+    queued = []
     for item in updates:
         update_type = item.get("update_type")
-
         if update_type in UPDATE_HANDLERS:
-            label, handler = UPDATE_HANDLERS[update_type]
-            try:
-                handler()
-                triggered.append(label)
-            except requests.RequestException as e:
-                failed.append({"component": label, "error": str(e)})
-
+            background_tasks.add_task(_run_update, UPDATE_HANDLERS[update_type])
+            queued.append(update_type)
         elif update_type == "addon":
             panel_path = item.get("panel_path", "")
             addon_slug = panel_path.rstrip("/").split("/")[-1]
-            if not ADDON_SLUG_PATTERN.match(addon_slug):
-                failed.append({"component": addon_slug, "error": "Invalid slug in panel_path"})
-                continue
-            try:
-                update_addon(addon_slug)
-                triggered.append(addon_slug)
-            except requests.RequestException as e:
-                failed.append({"component": addon_slug, "error": str(e)})
+            if ADDON_SLUG_PATTERN.match(addon_slug):
+                background_tasks.add_task(_run_update, update_addon, addon_slug)
+                queued.append(addon_slug)
 
-    return {
-        "status": "success" if not failed else "partial",
-        "triggered": triggered,
-        "failed": failed,
-    }
+    return {"status": "triggered", "queued": queued}
 
 
 if __name__ == "__main__":

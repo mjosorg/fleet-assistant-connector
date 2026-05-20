@@ -1,4 +1,4 @@
-## 2026.05.20
+## 2026.05.06
 - Added Supervisor API update endpoints: `/updates`, `/updates/core`, `/updates/os`, `/updates/supervisor`, `/updates/addon/{slug}`, `/updates/all`
 - Fixed critical bug where `EnvironmentError` caught all `requests` exceptions (timeouts, connection errors) before the intended handler, causing backup failures to return HTTP 500 instead of 502
 - Increased backup creation timeout from 60 s to 180 s to handle slow Supervisors
