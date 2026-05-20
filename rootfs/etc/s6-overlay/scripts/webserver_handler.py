@@ -14,6 +14,13 @@ from helper_backup import (
     get_installed_addons,
     get_backup_info
 )
+from helper_updates import (
+    get_available_updates,
+    update_core,
+    update_os,
+    update_supervisor,
+    update_addon,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +28,16 @@ app = FastAPI(title="Fleet Assistant Supervisor Proxy")
 
 # --- Slug validation ---
 SLUG_PATTERN = re.compile(r'^[a-f0-9]{8}$')
+ADDON_SLUG_PATTERN = re.compile(r'^[a-zA-Z0-9_-]{1,64}$')
 
 def validate_slug(slug: str) -> str:
-    """Ensures the slug is a valid 8-char hex string before passing to Supervisor."""
     if not SLUG_PATTERN.match(slug):
         raise HTTPException(status_code=400, detail="Invalid backup slug format")
+    return slug
+
+def validate_addon_slug(slug: str) -> str:
+    if not ADDON_SLUG_PATTERN.match(slug):
+        raise HTTPException(status_code=400, detail="Invalid addon slug format")
     return slug
 
 # --- Models ---
@@ -144,6 +156,129 @@ async def delete_backup_endpoint(slug: str):
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {status_code}")
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+
+@app.get("/updates")
+async def fetch_available_updates():
+    """Returns all available updates: OS, Core, Supervisor, and add-ons."""
+    try:
+        updates = get_available_updates()
+        return {"status": "success", "updates": updates}
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+
+@app.post("/updates/core")
+async def trigger_core_update():
+    """Triggers a Home Assistant Core update."""
+    try:
+        update_core()
+        return {"status": "success", "message": "Home Assistant Core update triggered"}
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+
+@app.post("/updates/os")
+async def trigger_os_update():
+    """Triggers a Home Assistant OS update."""
+    try:
+        update_os()
+        return {"status": "success", "message": "Home Assistant OS update triggered"}
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+
+@app.post("/updates/supervisor")
+async def trigger_supervisor_update():
+    """Triggers a Home Assistant Supervisor update."""
+    try:
+        update_supervisor()
+        return {"status": "success", "message": "Supervisor update triggered"}
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+
+@app.post("/updates/addon/{slug}")
+async def trigger_addon_update(slug: str):
+    """Triggers an update for a specific add-on by slug."""
+    validate_addon_slug(slug)
+    try:
+        update_addon(slug)
+        return {"status": "success", "message": f"Update triggered for add-on '{slug}'"}
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except requests.HTTPError as e:
+        status_code = e.response.status_code
+        if status_code == 404:
+            raise HTTPException(status_code=404, detail=f"Add-on '{slug}' not found")
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+
+@app.post("/updates/all")
+async def trigger_all_updates():
+    """Triggers updates for all available components (OS, Core, Supervisor, add-ons)."""
+    try:
+        updates = get_available_updates()
+    except EnvironmentError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+    triggered = []
+    failed = []
+
+    UPDATE_HANDLERS = {
+        "homeassistant": ("core", update_core),
+        "os": ("os", update_os),
+        "supervisor": ("supervisor", update_supervisor),
+    }
+
+    for item in updates:
+        update_type = item.get("update_type")
+        identifier = item.get("identifier", update_type)
+
+        if update_type in UPDATE_HANDLERS:
+            label, handler = UPDATE_HANDLERS[update_type]
+            try:
+                handler()
+                triggered.append(label)
+            except requests.RequestException as e:
+                failed.append({"component": label, "error": str(e)})
+
+        elif update_type == "addon":
+            addon_slug = item.get("identifier", "")
+            if not ADDON_SLUG_PATTERN.match(addon_slug):
+                failed.append({"component": addon_slug, "error": "Invalid slug returned by Supervisor"})
+                continue
+            try:
+                update_addon(addon_slug)
+                triggered.append(addon_slug)
+            except requests.RequestException as e:
+                failed.append({"component": addon_slug, "error": str(e)})
+
+    return {
+        "status": "success" if not failed else "partial",
+        "triggered": triggered,
+        "failed": failed,
+    }
 
 
 if __name__ == "__main__":
