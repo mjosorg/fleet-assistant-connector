@@ -22,7 +22,9 @@ def create_partial_backup_supervisor(
     name: str,
     selected_slugs: list,
     folders: Optional[list] = None,
-    include_ha: bool = True
+    include_ha: bool = True,
+    exclude_database: bool = False,
+    background: bool = False,
 ) -> str:
     """Triggers a partial backup via the Home Assistant Supervisor API."""
     if folders is None:
@@ -32,14 +34,16 @@ def create_partial_backup_supervisor(
         "name": name,
         "addons": selected_slugs,
         "homeassistant": include_ha,
-        "folders": folders
+        "homeassistant_exclude_database": exclude_database,
+        "background": background,
+        "folders": folders,
     }
 
     response = requests.post(
         f"{SUPERVISOR_BASE_URL}/backups/new/partial",
         headers=_auth_headers(content_type=True),
         json=payload,
-        timeout=180
+        timeout=600
     )
     response.raise_for_status()  # Raises HTTPError with status code automatically
 
