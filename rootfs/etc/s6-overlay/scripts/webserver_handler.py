@@ -46,6 +46,8 @@ class BackupRequest(BaseModel):
     addons: List[str]
     folders: Optional[List[str]] = None
     homeassistant: Optional[bool] = True
+    homeassistant_exclude_database: Optional[bool] = False
+    background: Optional[bool] = False
 
 # --- Routes ---
 
@@ -80,7 +82,9 @@ async def create_partial_backup(request: BackupRequest):
             name=request.name,
             selected_slugs=request.addons,
             folders=request.folders,
-            include_ha=request.homeassistant
+            include_ha=request.homeassistant,
+            exclude_database=request.homeassistant_exclude_database,
+            background=request.background,
         )
         return {
             "status": "success",
