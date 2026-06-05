@@ -35,7 +35,6 @@ def create_partial_backup_supervisor(
         "addons": selected_slugs,
         "homeassistant": include_ha,
         "homeassistant_exclude_database": exclude_database,
-        "background": background,
         "folders": folders,
     }
 
