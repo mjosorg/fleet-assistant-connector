@@ -56,6 +56,34 @@ async def health_check():
     return {"status": "online"}
 
 
+@app.get("/system")
+async def system_health():
+    """Returns host system metrics: CPU, memory, disk, OS info from the Supervisor."""
+    from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
+    try:
+        response = requests.get(
+            f"{SUPERVISOR_BASE_URL}/host/info",
+            headers=_auth_headers(),
+            timeout=10,
+        )
+        response.raise_for_status()
+        d = response.json().get("data", {})
+        return {
+            "cpu_percent": d.get("cpu_percent"),
+            "memory_used": d.get("memory_used"),
+            "memory_total": d.get("memory_total"),
+            "disk_used": d.get("disk_used"),
+            "disk_total": d.get("disk_total"),
+            "operating_system": d.get("operating_system"),
+            "hostname": d.get("hostname"),
+            "board": d.get("board"),
+        }
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+
 @app.get("/apps")
 async def fetch_addons():
     """Returns the list of installed Home Assistant add-ons."""
