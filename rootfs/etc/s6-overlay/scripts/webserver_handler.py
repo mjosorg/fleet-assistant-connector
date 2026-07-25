@@ -56,9 +56,36 @@ async def health_check():
     return {"status": "online"}
 
 
+def _proc_memory() -> tuple:
+    """Read memory used/total (MB) from /proc/meminfo."""
+    try:
+        fields = {}
+        with open("/proc/meminfo") as f:
+            for line in f:
+                key, _, val = line.partition(":")
+                fields[key.strip()] = int(val.strip().split()[0])  # kB
+        total_mb = fields["MemTotal"] // 1024
+        used_mb = (fields["MemTotal"] - fields["MemAvailable"]) // 1024
+        return used_mb, total_mb
+    except Exception:
+        return None, None
+
+
+def _proc_cpu_percent() -> float | None:
+    """Estimate CPU usage (%) from 1-minute load average vs CPU count."""
+    try:
+        import os
+        with open("/proc/loadavg") as f:
+            load = float(f.read().split()[0])
+        cpu_count = os.cpu_count() or 1
+        return round(min(load / cpu_count * 100, 100.0), 1)
+    except Exception:
+        return None
+
+
 @app.get("/system")
 async def system_health():
-    """Returns host system metrics: CPU, memory, disk, OS info from the Supervisor."""
+    """Returns host system metrics: CPU, memory, disk, OS info."""
     from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
     try:
         response = requests.get(
@@ -68,20 +95,33 @@ async def system_health():
         )
         response.raise_for_status()
         d = response.json().get("data", {})
-        return {
-            "cpu_percent": d.get("cpu_percent"),
-            "memory_used": d.get("memory_used"),
-            "memory_total": d.get("memory_total"),
-            "disk_used": d.get("disk_used"),
-            "disk_total": d.get("disk_total"),
-            "operating_system": d.get("operating_system"),
-            "hostname": d.get("hostname"),
-            "board": d.get("board"),
-        }
     except requests.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+    # cpu_percent and memory fields are optional in the Supervisor API (absent on HAOS 18+)
+    # fall back to reading host procfs which is accessible from inside the addon container
+    cpu_percent = d.get("cpu_percent")
+    memory_used = d.get("memory_used")
+    memory_total = d.get("memory_total")
+
+    if cpu_percent is None:
+        cpu_percent = _proc_cpu_percent()
+
+    if memory_used is None or memory_total is None:
+        memory_used, memory_total = _proc_memory()
+
+    return {
+        "cpu_percent": cpu_percent,
+        "memory_used": memory_used,
+        "memory_total": memory_total,
+        "disk_used": d.get("disk_used"),
+        "disk_total": d.get("disk_total"),
+        "operating_system": d.get("operating_system"),
+        "hostname": d.get("hostname"),
+        "board": d.get("board"),
+    }
 
 
 @app.get("/apps")
