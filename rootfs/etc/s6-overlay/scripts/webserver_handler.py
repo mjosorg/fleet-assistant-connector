@@ -162,6 +162,24 @@ async def delete_backup_endpoint(slug: str):
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
 
 
+@app.get("/repairs")
+async def get_repairs():
+    """Returns all active repair issues from the Home Assistant Core API."""
+    from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
+    try:
+        response = requests.get(
+            f"{SUPERVISOR_BASE_URL}/core/api/repairs/issues",
+            headers=_auth_headers(),
+            timeout=10,
+        )
+        response.raise_for_status()
+        return {"issues": response.json().get("issues", [])}
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+
 @app.get("/updates/progress")
 async def get_update_progress():
     """Returns numeric install progress (0-100) for any update entity currently installing, or null."""
