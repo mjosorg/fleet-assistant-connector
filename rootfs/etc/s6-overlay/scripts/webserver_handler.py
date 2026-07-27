@@ -56,6 +56,74 @@ async def health_check():
     return {"status": "online"}
 
 
+def _proc_memory() -> tuple:
+    """Read memory used/total (MB) from /proc/meminfo."""
+    try:
+        fields = {}
+        with open("/proc/meminfo") as f:
+            for line in f:
+                key, _, val = line.partition(":")
+                fields[key.strip()] = int(val.strip().split()[0])  # kB
+        total_mb = fields["MemTotal"] // 1024
+        used_mb = (fields["MemTotal"] - fields["MemAvailable"]) // 1024
+        return used_mb, total_mb
+    except Exception:
+        return None, None
+
+
+def _proc_cpu_percent() -> float | None:
+    """Estimate CPU usage (%) from 1-minute load average vs CPU count."""
+    try:
+        import os
+        with open("/proc/loadavg") as f:
+            load = float(f.read().split()[0])
+        cpu_count = os.cpu_count() or 1
+        return round(min(load / cpu_count * 100, 100.0), 1)
+    except Exception:
+        return None
+
+
+@app.get("/system")
+async def system_health():
+    """Returns host system metrics: CPU, memory, disk, OS info."""
+    from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
+    try:
+        response = requests.get(
+            f"{SUPERVISOR_BASE_URL}/host/info",
+            headers=_auth_headers(),
+            timeout=10,
+        )
+        response.raise_for_status()
+        d = response.json().get("data", {})
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+    # cpu_percent and memory fields are optional in the Supervisor API (absent on HAOS 18+)
+    # fall back to reading host procfs which is accessible from inside the addon container
+    cpu_percent = d.get("cpu_percent")
+    memory_used = d.get("memory_used")
+    memory_total = d.get("memory_total")
+
+    if cpu_percent is None:
+        cpu_percent = _proc_cpu_percent()
+
+    if memory_used is None or memory_total is None:
+        memory_used, memory_total = _proc_memory()
+
+    return {
+        "cpu_percent": cpu_percent,
+        "memory_used": memory_used,
+        "memory_total": memory_total,
+        "disk_used": d.get("disk_used"),
+        "disk_total": d.get("disk_total"),
+        "operating_system": d.get("operating_system"),
+        "hostname": d.get("hostname"),
+        "board": d.get("board"),
+    }
+
+
 @app.get("/apps")
 async def fetch_addons():
     """Returns the list of installed Home Assistant add-ons."""
@@ -160,6 +228,50 @@ async def delete_backup_endpoint(slug: str):
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {status_code}")
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+
+@app.get("/repairs")
+async def get_repairs():
+    """Returns all active repair issues from the Home Assistant Core API."""
+    from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
+    try:
+        response = requests.get(
+            f"{SUPERVISOR_BASE_URL}/core/api/repairs/issues",
+            headers=_auth_headers(),
+            timeout=10,
+        )
+        response.raise_for_status()
+        return {"issues": response.json().get("issues", [])}
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+
+@app.get("/updates/progress")
+async def get_update_progress():
+    """Returns numeric install progress (0-100) for any update entity currently installing, or null."""
+    from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
+    UPDATE_ENTITIES = [
+        "update.home_assistant_core_update",
+        "update.home_assistant_operating_system_update",
+        "update.home_assistant_supervisor_update",
+    ]
+    for entity_id in UPDATE_ENTITIES:
+        try:
+            response = requests.get(
+                f"{SUPERVISOR_BASE_URL}/core/api/states/{entity_id}",
+                headers=_auth_headers(),
+                timeout=5,
+            )
+            if response.status_code != 200:
+                continue
+            in_progress = response.json().get("attributes", {}).get("in_progress")
+            if isinstance(in_progress, (int, float)) and not isinstance(in_progress, bool) and in_progress > 0:
+                return {"in_progress": int(in_progress), "entity_id": entity_id}
+        except requests.RequestException:
+            continue
+    return {"in_progress": None}
 
 
 @app.get("/updates")
