@@ -241,7 +241,9 @@ async def get_repairs():
             timeout=10,
         )
         response.raise_for_status()
-        return {"issues": response.json().get("issues", [])}
+        data = response.json()
+        issues = data if isinstance(data, list) else data.get("issues", [])
+        return {"issues": issues}
     except requests.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
