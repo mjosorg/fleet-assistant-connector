@@ -1,6 +1,6 @@
 name: "Fleet Assistant Connector"
 description: "Fleet assistant connector [DEV]"
-version: "2026.07.05"
+version: "2026.08.00"
 slug: "fleet_assistant_connector_dev"
 init: false
 url: https://github.com/mjosorg/fleet-assistant-connector
@@ -24,7 +24,6 @@ options:
     port: 51820
     publickey: inputpublickeyfrommaster
     tunnelip: inputtunnelIP
-    installation_id: Installation ID
     fleet_assistant_server_ip: Fleet Assistant Server IP
 
 schema:
@@ -33,5 +32,4 @@ schema:
     port: port
     publickey: str
     tunnelip: str
-    installation_id: str
     fleet_assistant_server_ip: str

@@ -22,6 +22,11 @@ from helper_updates import (
     update_addon,
 )
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Fleet Assistant Supervisor Proxy")
@@ -96,8 +101,10 @@ async def system_health():
         response.raise_for_status()
         d = response.json().get("data", {})
     except requests.HTTPError as e:
+        logger.error("Failed to fetch host info from Supervisor: HTTP %s", e.response.status_code)
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
+        logger.error("Failed to reach Supervisor for host info: %s", e)
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
 
     # cpu_percent and memory fields are optional in the Supervisor API (absent on HAOS 18+)
@@ -135,10 +142,13 @@ async def fetch_addons():
             "apps": apps
         }
     except requests.HTTPError as e:
+        logger.error("Failed to fetch add-on list from Supervisor: HTTP %s", e.response.status_code)
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
+        logger.error("Failed to reach Supervisor for add-on list: %s", e)
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
     except EnvironmentError as e:
+        logger.error("Cannot fetch add-on list: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -154,18 +164,23 @@ async def create_partial_backup(request: BackupRequest):
             exclude_database=request.homeassistant_exclude_database,
             background=request.background,
         )
+        logger.info("Partial backup '%s' created (slug=%s)", request.name, backup_slug)
         return {
             "status": "success",
             "slug": backup_slug,
             "message": f"Partial backup '{request.name}' started"
         }
     except requests.HTTPError as e:
+        logger.error("Backup '%s' failed: Supervisor API error %s", request.name, e.response.status_code)
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
+        logger.error("Backup '%s' failed: Supervisor connection error: %s", request.name, e)
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
     except ValueError as e:
+        logger.error("Backup '%s' failed: %s", request.name, e)
         raise HTTPException(status_code=502, detail=str(e))
     except EnvironmentError as e:
+        logger.error("Backup '%s' failed: %s", request.name, e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -176,8 +191,10 @@ async def backup_info_endpoint(slug: str):
     try:
         info = get_backup_info(slug)
     except requests.HTTPError as e:
+        logger.error("Failed to fetch backup info for '%s': Supervisor API error %s", slug, e.response.status_code)
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
+        logger.error("Failed to fetch backup info for '%s': %s", slug, e)
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
     if not info:
         raise HTTPException(status_code=202, detail="Backup not ready yet, try again shortly")
@@ -205,8 +222,10 @@ async def download_backup_endpoint(slug: str, background_tasks: BackgroundTasks)
             }
         )
     except requests.HTTPError as e:
+        logger.error("Failed to download backup '%s': Supervisor API error %s", slug, e.response.status_code)
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
+        logger.error("Failed to download backup '%s': %s", slug, e)
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
 
 
@@ -216,6 +235,7 @@ async def delete_backup_endpoint(slug: str):
     validate_slug(slug)
     try:
         delete_backup_from_supervisor(slug)
+        logger.info("Backup '%s' deleted", slug)
         return {
             "status": "success",
             "slug": slug,
@@ -225,28 +245,31 @@ async def delete_backup_endpoint(slug: str):
         status_code = e.response.status_code
         if status_code == 404:
             raise HTTPException(status_code=404, detail=f"Backup {slug} not found")
+        logger.error("Failed to delete backup '%s': Supervisor API error %s", slug, status_code)
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {status_code}")
     except requests.RequestException as e:
+        logger.error("Failed to delete backup '%s': %s", slug, e)
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
 
 
 @app.get("/repairs")
 async def get_repairs():
-    """Returns all active repair issues from the Home Assistant Core API."""
+    """Returns all active issues from the Supervisor resolution center."""
     from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
     try:
         response = requests.get(
-            f"{SUPERVISOR_BASE_URL}/core/api/repairs/issues",
+            f"{SUPERVISOR_BASE_URL}/resolution/info",
             headers=_auth_headers(),
             timeout=10,
         )
         response.raise_for_status()
-        data = response.json()
-        issues = data if isinstance(data, list) else data.get("issues", [])
+        issues = response.json().get("data", {}).get("issues", [])
         return {"issues": issues}
     except requests.HTTPError as e:
+        logger.error("Failed to fetch repairs from Supervisor: HTTP %s", e.response.status_code)
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
+        logger.error("Failed to reach Supervisor for repairs: %s", e)
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
 
 
@@ -283,39 +306,46 @@ async def fetch_available_updates():
         updates = get_available_updates()
         return {"status": "success", "updates": updates}
     except requests.HTTPError as e:
+        logger.error("Failed to fetch available updates: Supervisor API error %s", e.response.status_code)
         raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
+        logger.error("Failed to reach Supervisor for available updates: %s", e)
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
     except EnvironmentError as e:
+        logger.error("Cannot fetch available updates: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def _run_update(fn, *args):
+def _run_update(label, fn, *args):
     """Runs an update function and logs any error (used as a BackgroundTask)."""
     try:
         fn(*args)
+        logger.info("%s update completed", label)
     except Exception as e:
-        logger.error("Background update failed (%s %s): %s", fn.__name__, args, e)
+        logger.error("%s update failed: %s", label, e)
 
 
 @app.post("/updates/core")
 async def trigger_core_update(background_tasks: BackgroundTasks):
     """Triggers a Home Assistant Core update (fire-and-forget)."""
-    background_tasks.add_task(_run_update, update_core)
+    logger.info("Home Assistant Core update triggered")
+    background_tasks.add_task(_run_update, "Home Assistant Core", update_core)
     return {"status": "triggered", "message": "Home Assistant Core update started"}
 
 
 @app.post("/updates/os")
 async def trigger_os_update(background_tasks: BackgroundTasks):
     """Triggers a Home Assistant OS update (fire-and-forget)."""
-    background_tasks.add_task(_run_update, update_os)
+    logger.info("Home Assistant OS update triggered")
+    background_tasks.add_task(_run_update, "Home Assistant OS", update_os)
     return {"status": "triggered", "message": "Home Assistant OS update started"}
 
 
 @app.post("/updates/supervisor")
 async def trigger_supervisor_update(background_tasks: BackgroundTasks):
     """Triggers a Home Assistant Supervisor update (fire-and-forget)."""
-    background_tasks.add_task(_run_update, update_supervisor)
+    logger.info("Supervisor update triggered")
+    background_tasks.add_task(_run_update, "Supervisor", update_supervisor)
     return {"status": "triggered", "message": "Supervisor update started"}
 
 
@@ -323,7 +353,8 @@ async def trigger_supervisor_update(background_tasks: BackgroundTasks):
 async def trigger_addon_update(slug: str, background_tasks: BackgroundTasks):
     """Triggers an update for a specific add-on by slug (fire-and-forget)."""
     validate_addon_slug(slug)
-    background_tasks.add_task(_run_update, update_addon, slug)
+    logger.info("Add-on '%s' update triggered", slug)
+    background_tasks.add_task(_run_update, f"Add-on '{slug}'", update_addon, slug)
     return {"status": "triggered", "message": f"Update started for add-on '{slug}'"}
 
 
@@ -333,10 +364,17 @@ async def trigger_all_updates(background_tasks: BackgroundTasks):
     try:
         updates = get_available_updates()
     except EnvironmentError as e:
+        logger.error("Cannot trigger updates: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
     except requests.RequestException as e:
+        logger.error("Failed to reach Supervisor for available updates: %s", e)
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
 
+    UPDATE_LABELS = {
+        "core": "Home Assistant Core",
+        "os": "Home Assistant OS",
+        "supervisor": "Supervisor",
+    }
     UPDATE_HANDLERS = {
         "core": update_core,
         "os": update_os,
@@ -347,18 +385,19 @@ async def trigger_all_updates(background_tasks: BackgroundTasks):
     for item in updates:
         update_type = item.get("update_type")
         if update_type in UPDATE_HANDLERS:
-            background_tasks.add_task(_run_update, UPDATE_HANDLERS[update_type])
+            background_tasks.add_task(_run_update, UPDATE_LABELS[update_type], UPDATE_HANDLERS[update_type])
             queued.append(update_type)
         elif update_type == "addon":
             panel_path = item.get("panel_path", "")
             addon_slug = panel_path.rstrip("/").split("/")[-1]
             if ADDON_SLUG_PATTERN.match(addon_slug):
-                background_tasks.add_task(_run_update, update_addon, addon_slug)
+                background_tasks.add_task(_run_update, f"Add-on '{addon_slug}'", update_addon, addon_slug)
                 queued.append(addon_slug)
 
+    logger.info("Bulk update triggered: %s", queued if queued else "nothing to update")
     return {"status": "triggered", "queued": queued}
 
 
 if __name__ == "__main__":
-    logger.warning("Webserver proxy starting up")
+    logger.info("Fleet Assistant Supervisor Proxy listening on port 8321")
     uvicorn.run(app, host="0.0.0.0", port=8321, log_level="warning")

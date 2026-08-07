@@ -42,7 +42,6 @@ peer_private_key=$(<"${config_dir}/private_key")
 if ! bashio::fs.file_exists "${config_dir}/public_key"; then
     peer_public_key=$(wg pubkey <<< "${peer_private_key}")
     echo "$peer_public_key" > "${config_dir}/public_key"
-    bashio::log.info "Public key= $peer_public_key"
 fi
 peer_public_key=$(<"${config_dir}/public_key")
 # Get config input from addon UI
@@ -86,4 +85,36 @@ echo ""
 cp "${config_dir}/${clientname}.conf" "/etc/wireguard/${clientname}.conf" ||
     bashio::exit.nok "Unable to copy config file to /etc/wireguard"
 
-bashio::log.info "The wireguard public key is: ${peer_public_key}"
+bashio::log.info "WireGuard public key: ${peer_public_key}"
+
+# --- Check that Home Assistant trusts this add-on as a reverse proxy ---
+# Home Assistant needs use_x_forwarded_for + trusted_proxies set to the add-on
+# network (172.30.33.0/24) for it to correctly identify proxied requests.
+# This moved from configuration.yaml to UI-managed storage in HA 2026.7+.
+TRUSTED_PROXY_CIDR="172.30.33.0/24"
+HTTP_STORAGE="/config/.storage/http"
+CONFIG_FILE="/config/configuration.yaml"
+proxy_configured=false
+
+if [ -f "${HTTP_STORAGE}" ]; then
+    if jq -e --arg cidr "${TRUSTED_PROXY_CIDR}" '
+        (.data.stable // {}) as $c |
+        ($c.use_x_forwarded_for == true) and (($c.trusted_proxies // []) | index($cidr) != null)
+    ' "${HTTP_STORAGE}" > /dev/null 2>&1; then
+        proxy_configured=true
+    fi
+elif [ -f "${CONFIG_FILE}" ] && grep -q "^http:" "${CONFIG_FILE}" \
+    && grep -q "use_x_forwarded_for" "${CONFIG_FILE}" \
+    && grep -q "${TRUSTED_PROXY_CIDR}" "${CONFIG_FILE}"; then
+    proxy_configured=true
+fi
+
+if [ "${proxy_configured}" = true ]; then
+    bashio::log.info "Home Assistant reverse proxy trust is configured correctly."
+else
+    bashio::log.warning "Home Assistant is not configured to trust this add-on as a reverse proxy."
+    bashio::log.warning "Go to Settings > System > Network > Reverse proxy in Home Assistant and:"
+    bashio::log.warning "  1. Enable 'Trust X-Forwarded-For'"
+    bashio::log.warning "  2. Add '${TRUSTED_PROXY_CIDR}' under 'Trusted proxies'"
+    bashio::log.warning "  3. Restart Home Assistant"
+fi
