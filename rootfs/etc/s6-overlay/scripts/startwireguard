@@ -10,7 +10,16 @@ bashio::log.info "Starting WireGuard..."
 # Get the interface
 interface="fleet-assistant"
 
-# wg-quick echoes every command it runs prefixed with "[#]" — routine noise.
-# Filter those out but keep everything else (actual errors/warnings intact).
-wg-quick up "${interface}" 2>&1 | grep -v '^\[#\]' >&2
-exit "${PIPESTATUS[0]}"
+# wg-quick refuses to bring an interface up if it already exists — which
+# happens if a previous run didn't tear it down cleanly (e.g. an unclean
+# container restart). Clear it first so startup can't get stuck on this.
+if ip link show "${interface}" &> /dev/null; then
+    bashio::log.warning "WireGuard interface '${interface}' already exists from a previous run, tearing it down first"
+    wg-quick down "${interface}" &> /dev/null || ip link delete dev "${interface}" &> /dev/null || true
+fi
+
+# wg-quick echoes every command it runs prefixed with "[#]" to stderr — routine
+# noise. Filter just that out via process substitution, not a pipeline, so
+# wg-quick stays the exec'd process: it registers its own cleanup traps (to tear
+# down the interface on shutdown) tied to its PID, which a pipeline would break.
+exec wg-quick up "${interface}" 2> >(grep -v '^\[#\]' >&2)
