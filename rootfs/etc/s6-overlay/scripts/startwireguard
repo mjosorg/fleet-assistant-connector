@@ -10,5 +10,7 @@ bashio::log.info "Starting WireGuard..."
 # Get the interface
 interface="fleet-assistant"
 
-# Run the WireGuard
-exec wg-quick up "${interface}"
+# wg-quick echoes every command it runs prefixed with "[#]" — routine noise.
+# Filter those out but keep everything else (actual errors/warnings intact).
+wg-quick up "${interface}" 2>&1 | grep -v '^\[#\]' >&2
+exit "${PIPESTATUS[0]}"

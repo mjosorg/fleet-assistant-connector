@@ -31,6 +31,80 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Fleet Assistant Supervisor Proxy")
 
+# --- Supervisor resolution-center issue enrichment ---
+# The Supervisor's /resolution/info only gives back machine slugs (type, context,
+# reference) — no severity or human-readable text. This maps each known issue
+# type (see home-assistant/supervisor supervisor/resolution/const.py) to a
+# title/description/severity so API consumers don't need Supervisor-specific knowledge.
+ISSUE_TYPE_INFO = {
+    "app_port_conflict": ("Port conflict", "An add-on's configured port conflicts with another add-on or Home Assistant Core.", "warning"),
+    "boot_fail": ("Boot failure", "The system failed to boot correctly.", "critical"),
+    "corrupt_docker": ("Corrupt Docker installation", "The Docker installation is corrupt and needs to be repaired.", "critical"),
+    "corrupt_repository": ("Corrupt add-on repository", "An add-on repository is corrupt and could not be loaded.", "warning"),
+    "corrupt_filesystem": ("Corrupt filesystem", "A filesystem on this system is corrupt.", "critical"),
+    "deprecated_app": ("Deprecated add-on", "An installed add-on is deprecated and should be removed or replaced.", "warning"),
+    "deprecated_arch_app": ("Unsupported add-on architecture", "An installed add-on no longer supports this system's architecture.", "warning"),
+    "detached_app_missing": ("Add-on repository missing", "An installed add-on's repository is no longer available.", "warning"),
+    "detached_app_removed": ("Add-on removed from repository", "An installed add-on was removed from its repository.", "warning"),
+    "device_access_missing": ("Device access missing", "An add-on is missing access to a required device.", "error"),
+    "disabled_data_disk": ("Data disk disabled", "The external data disk is disabled.", "error"),
+    "disk_lifetime": ("Disk nearing end of life", "The system disk is reporting it is nearing the end of its lifetime.", "warning"),
+    "dns_loop": ("DNS loop detected", "A DNS loop was detected, which can cause connectivity issues.", "warning"),
+    "duplicate_os_installation": ("Duplicate OS installation detected", "Another Home Assistant OS installation was detected on this system.", "warning"),
+    "dns_server_failed": ("DNS server failed", "The internal DNS server failed to start or is not responding.", "error"),
+    "dns_server_ipv6_error": ("DNS server IPv6 error", "The internal DNS server had an IPv6-related error.", "warning"),
+    "docker_config": ("Docker configuration issue", "The Docker daemon configuration is not set up as expected.", "warning"),
+    "docker_ratelimit": ("Docker Hub rate limit", "Docker Hub's pull rate limit was hit, which can block updates.", "warning"),
+    "fatal_error": ("Fatal error", "A fatal error occurred that needs manual attention.", "critical"),
+    "free_space": ("Low disk space", "The system is running low on free disk space.", "error"),
+    "ipv4_connection_problem": ("IPv4 connectivity problem", "The system cannot reach the internet over IPv4.", "warning"),
+    "missing_image": ("Missing container image", "A required container image is missing.", "error"),
+    "mount_failed": ("Mount failed", "A configured network/disk mount failed.", "error"),
+    "multiple_data_disks": ("Multiple data disks detected", "More than one external data disk was detected.", "warning"),
+    "no_current_backup": ("No recent backup", "There is no recent backup of this installation.", "warning"),
+    "ntp_sync_failed": ("Time sync failed", "The system clock could not be synchronized over NTP.", "warning"),
+    "pwned": ("Compromised add-on/version", "An installed add-on or version was flagged as compromised.", "critical"),
+    "reboot_required": ("Restart required", "Home Assistant needs to be restarted for a recent change to take effect.", "warning"),
+    "rpi_firmware_update_blocked": ("Raspberry Pi firmware update blocked", "A Raspberry Pi firmware update is blocked.", "warning"),
+    "security": ("Security issue", "A security issue was detected on this system.", "critical"),
+    "systemd_unit_failed": ("System service failed", "A system service (systemd unit) failed to start.", "error"),
+    "update_failed": ("Update failed", "A recent update failed to install.", "error"),
+    "update_rollback": ("Update rolled back", "A recent update failed and was automatically rolled back.", "error"),
+}
+
+CONTEXT_LABELS = {
+    "addon": "Add-on",
+    "core": "Core",
+    "dns_server": "DNS",
+    "mount": "Mount",
+    "os": "OS",
+    "plugin": "Plugin",
+    "supervisor": "Supervisor",
+    "store": "Store",
+    "system": "System",
+}
+
+
+def _describe_issue(issue: dict) -> dict:
+    """Adds a human-readable title/description/severity to a raw Supervisor resolution issue."""
+    issue_type = issue.get("type") or ""
+    title, description, severity = ISSUE_TYPE_INFO.get(
+        issue_type,
+        (issue_type.replace("_", " ").capitalize() or "Unknown issue", "No further details are available for this issue type.", "warning"),
+    )
+    reference = issue.get("reference")
+    if reference:
+        description = f"{description} ({reference})"
+    context = issue.get("context") or ""
+    return {
+        **issue,
+        "title": title,
+        "description": description,
+        "severity": severity,
+        "context_label": CONTEXT_LABELS.get(context, context),
+    }
+
+
 # --- Slug validation ---
 SLUG_PATTERN = re.compile(r'^[a-f0-9]{8}$')
 ADDON_SLUG_PATTERN = re.compile(r'^[a-zA-Z0-9_-]{1,64}$')
@@ -263,7 +337,8 @@ async def get_repairs():
             timeout=10,
         )
         response.raise_for_status()
-        issues = response.json().get("data", {}).get("issues", [])
+        raw_issues = response.json().get("data", {}).get("issues", [])
+        issues = [_describe_issue(issue) for issue in raw_issues]
         return {"issues": issues}
     except requests.HTTPError as e:
         logger.error("Failed to fetch repairs from Supervisor: HTTP %s", e.response.status_code)
