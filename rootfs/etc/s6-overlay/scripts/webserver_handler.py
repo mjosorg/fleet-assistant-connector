@@ -340,24 +340,61 @@ async def delete_backup_endpoint(slug: str):
 
 @app.get("/repairs")
 async def get_repairs():
-    """Returns all active issues from the Supervisor resolution center."""
+    """Returns active repair issues from both HA Core integrations and the Supervisor."""
     from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
+
+    issues = []
+
+    # 1. HA Core integration repairs (authentication expired, YAML errors, etc.)
     try:
-        response = requests.get(
+        resp = requests.get(
+            f"{SUPERVISOR_BASE_URL}/core/api/repairs/issues",
+            headers=_auth_headers(),
+            timeout=10,
+        )
+        resp.raise_for_status()
+        core_data = resp.json()
+        core_list = core_data if isinstance(core_data, list) else core_data.get("issues", [])
+        for issue in core_list:
+            if issue.get("ignored"):
+                continue
+            key = (issue.get("translation_key") or "").replace("_", " ").capitalize()
+            placeholders = issue.get("translation_placeholders") or {}
+            desc = ", ".join(str(v) for v in placeholders.values()) if placeholders else ""
+            title = f"{key} — {desc}" if desc else key
+            issues.append({
+                "title": title or "Unknown issue",
+                "domain": issue.get("domain", ""),
+                "severity": issue.get("severity", "warning"),
+                "source": "core",
+            })
+    except Exception as e:
+        logger.warning("Failed to fetch Core repairs: %s", e)
+
+    # 2. Supervisor resolution issues (disk, docker, boot failures, etc.)
+    try:
+        resp = requests.get(
             f"{SUPERVISOR_BASE_URL}/resolution/info",
             headers=_auth_headers(),
             timeout=10,
         )
-        response.raise_for_status()
-        raw_issues = response.json().get("data", {}).get("issues", [])
-        issues = [_describe_issue(issue) for issue in raw_issues]
-        return {"issues": issues}
-    except requests.HTTPError as e:
-        logger.error("Failed to fetch repairs from Supervisor: HTTP %s", e.response.status_code)
-        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
-    except requests.RequestException as e:
-        logger.error("Failed to reach Supervisor for repairs: %s", e)
-        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+        resp.raise_for_status()
+        raw_issues = resp.json().get("data", {}).get("issues", [])
+        for issue in raw_issues:
+            described = _describe_issue(issue)
+            context = described.get("context_label", "Supervisor")
+            reference = described.get("reference") or ""
+            domain = f"{context}: {reference}" if reference else context
+            issues.append({
+                "title": described["title"],
+                "domain": domain,
+                "severity": described["severity"],
+                "source": "supervisor",
+            })
+    except Exception as e:
+        logger.warning("Failed to fetch Supervisor resolution issues: %s", e)
+
+    return {"issues": issues}
 
 
 @app.get("/updates/progress")
