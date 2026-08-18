@@ -1,3 +1,4 @@
+import os
 import re
 import logging
 import requests
@@ -22,8 +23,20 @@ from helper_updates import (
     update_addon,
 )
 
+# Maps the add-on's `log_level` option (bashio's convention) to Python's levels.
+_LOG_LEVELS = {
+    "trace": logging.DEBUG,
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "notice": logging.INFO,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+    "fatal": logging.CRITICAL,
+}
+_log_level = _LOG_LEVELS.get(os.environ.get("LOG_LEVEL", "warning").lower(), logging.WARNING)
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=_log_level,
     format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
@@ -153,7 +166,6 @@ def _proc_memory() -> tuple:
 def _proc_cpu_percent() -> float | None:
     """Estimate CPU usage (%) from 1-minute load average vs CPU count."""
     try:
-        import os
         with open("/proc/loadavg") as f:
             load = float(f.read().split()[0])
         cpu_count = os.cpu_count() or 1

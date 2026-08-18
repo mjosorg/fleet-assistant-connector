@@ -1,4 +1,6 @@
 ## 2026.08.00
+- Added a `log_level` option (default `warning`) controlling both bashio's own logging and the webserver's — the webserver logged everything at `INFO` unconditionally before this, which is too noisy for normal operation.
+- The WireGuard public key is now always logged on startup regardless of `log_level` (it moved to `info` when `log_level` was added, which would have hidden it by default — but it's needed every startup to pair with the server).
 - Fixed WireGuard startup failing with "already exists" after an unclean restart, and fixed a regression where filtering `wg-quick`'s command-echo noise broke its own shutdown cleanup (it must stay the exec'd process so its cleanup traps fire).
 - Reduced container log noise: `s6-rc` now only logs warnings/errors instead of every service start/stop, and `wg-quick`'s per-command `[#] ...` echo lines are filtered out.
 - Enriched `/repairs` output with a human-readable `title`/`description`/`severity` per issue (Supervisor's `/resolution/info` only returns machine slugs), covering all known Supervisor resolution issue types with a safe fallback for unknown ones.

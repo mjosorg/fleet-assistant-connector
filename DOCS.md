@@ -17,6 +17,7 @@ Follow these steps to get the add-on installed on your system:
 Add-on configuration:
 
 ```yaml
+log_level: list(trace|debug|info|notice|warning|error|fatal)
 server:
   host: str
   port: port
@@ -24,6 +25,10 @@ server:
   tunnelip: str
   fleet_assistant_server_ip: str
 ```
+
+### Option: `log_level` (optional)
+
+Controls how verbose the add-on's logs are. Defaults to `warning`, which only logs problems — set it to `info` or `debug` temporarily if you need to troubleshoot something (e.g. to see each backup/update as it happens).
 
 ### Option: `server.host` (required)
 

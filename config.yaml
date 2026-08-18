@@ -1,6 +1,6 @@
 name: "Fleet Assistant Connector"
 description: "Fleet assistant connector [DEV]"
-version: "2026.08.02"
+version: "2026.08.03"
 slug: "fleet_assistant_connector_dev"
 init: false
 url: https://github.com/mjosorg/fleet-assistant-connector
@@ -19,6 +19,7 @@ arch:
   - amd64
 
 options:
+  log_level: warning
   server:
     host: my.VPS.org
     port: 51820
@@ -27,6 +28,7 @@ options:
     fleet_assistant_server_ip: Fleet Assistant Server IP
 
 schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
   server:
     host: str
     port: port
