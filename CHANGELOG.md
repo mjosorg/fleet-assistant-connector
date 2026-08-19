@@ -1,4 +1,5 @@
 ## 2026.08.00
+- Fixed the "defining user bundles in /etc/s6-overlay/s6-rc.d is deprecated" warning by moving the `webserver_proxy` user-bundle membership marker to the new `/etc/s6-overlay/user-bundles.d/user/contents.d/` location.
 - Added a `log_level` option (default `warning`) controlling both bashio's own logging and the webserver's — the webserver logged everything at `INFO` unconditionally before this, which is too noisy for normal operation.
 - The WireGuard public key is now always logged on startup regardless of `log_level` (it moved to `info` when `log_level` was added, which would have hidden it by default — but it's needed every startup to pair with the server).
 - Fixed WireGuard startup failing with "already exists" after an unclean restart, and fixed a regression where filtering `wg-quick`'s command-echo noise broke its own shutdown cleanup (it must stay the exec'd process so its cleanup traps fire).
