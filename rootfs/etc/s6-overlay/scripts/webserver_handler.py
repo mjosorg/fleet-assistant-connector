@@ -381,6 +381,8 @@ async def get_repairs():
         resp.raise_for_status()
         raw_issues = resp.json().get("data", {}).get("issues", [])
         for issue in raw_issues:
+            if issue.get("type") == "no_current_backup":
+                continue  # fleet-assistant manages backups externally; HA has none by design
             described = _describe_issue(issue)
             context = described.get("context_label", "Supervisor")
             reference = described.get("reference") or ""
