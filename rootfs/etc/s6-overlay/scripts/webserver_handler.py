@@ -401,25 +401,21 @@ async def get_repairs():
 async def get_update_progress():
     """Returns numeric install progress (0-100) for any update entity currently installing, or null."""
     from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
-    UPDATE_ENTITIES = [
-        "update.home_assistant_core_update",
-        "update.home_assistant_operating_system_update",
-        "update.home_assistant_supervisor_update",
-    ]
-    for entity_id in UPDATE_ENTITIES:
-        try:
-            response = requests.get(
-                f"{SUPERVISOR_BASE_URL}/core/api/states/{entity_id}",
-                headers=_auth_headers(),
-                timeout=5,
-            )
-            if response.status_code != 200:
+    try:
+        response = requests.get(
+            f"{SUPERVISOR_BASE_URL}/core/api/states",
+            headers=_auth_headers(),
+            timeout=8,
+        )
+        response.raise_for_status()
+        for state in response.json():
+            if not state.get("entity_id", "").startswith("update."):
                 continue
-            in_progress = response.json().get("attributes", {}).get("in_progress")
+            in_progress = state.get("attributes", {}).get("in_progress")
             if isinstance(in_progress, (int, float)) and not isinstance(in_progress, bool) and in_progress > 0:
-                return {"in_progress": int(in_progress), "entity_id": entity_id}
-        except requests.RequestException:
-            continue
+                return {"in_progress": int(in_progress), "entity_id": state["entity_id"]}
+    except requests.RequestException:
+        pass
     return {"in_progress": None}
 
 
