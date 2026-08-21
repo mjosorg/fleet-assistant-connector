@@ -340,38 +340,15 @@ async def delete_backup_endpoint(slug: str):
 
 @app.get("/repairs")
 async def get_repairs():
-    """Returns active repair issues from both HA Core integrations and the Supervisor."""
+    """Returns active repair issues from the Supervisor's resolution center.
+
+    Home Assistant Core's own issue registry (auth expired, YAML errors, etc.)
+    is intentionally not included here — it has no REST endpoint, only a
+    websocket API, so it can't be fetched with a simple request like this.
+    """
     from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
 
     issues = []
-
-    # 1. HA Core integration repairs (authentication expired, YAML errors, etc.)
-    try:
-        resp = requests.get(
-            f"{SUPERVISOR_BASE_URL}/core/api/repairs/issues",
-            headers=_auth_headers(),
-            timeout=10,
-        )
-        resp.raise_for_status()
-        core_data = resp.json()
-        core_list = core_data if isinstance(core_data, list) else core_data.get("issues", [])
-        for issue in core_list:
-            if issue.get("ignored"):
-                continue
-            key = (issue.get("translation_key") or "").replace("_", " ").capitalize()
-            placeholders = issue.get("translation_placeholders") or {}
-            desc = ", ".join(str(v) for v in placeholders.values()) if placeholders else ""
-            title = f"{key} — {desc}" if desc else key
-            issues.append({
-                "title": title or "Unknown issue",
-                "domain": issue.get("domain", ""),
-                "severity": issue.get("severity", "warning"),
-                "source": "core",
-            })
-    except Exception as e:
-        logger.warning("Failed to fetch Core repairs: %s", e)
-
-    # 2. Supervisor resolution issues (disk, docker, boot failures, etc.)
     try:
         resp = requests.get(
             f"{SUPERVISOR_BASE_URL}/resolution/info",
@@ -384,17 +361,19 @@ async def get_repairs():
             if issue.get("type") == "no_current_backup":
                 continue  # fleet-assistant manages backups externally; HA has none by design
             described = _describe_issue(issue)
-            context = described.get("context_label", "Supervisor")
-            reference = described.get("reference") or ""
-            domain = f"{context}: {reference}" if reference else context
             issues.append({
                 "title": described["title"],
-                "domain": domain,
+                "description": described["description"],
+                "domain": described.get("context_label", "Supervisor"),
                 "severity": described["severity"],
                 "source": "supervisor",
             })
-    except Exception as e:
-        logger.warning("Failed to fetch Supervisor resolution issues: %s", e)
+    except requests.HTTPError as e:
+        logger.error("Failed to fetch repairs from Supervisor: HTTP %s", e.response.status_code)
+        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
+    except requests.RequestException as e:
+        logger.error("Failed to reach Supervisor for repairs: %s", e)
+        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
 
     return {"issues": issues}
 

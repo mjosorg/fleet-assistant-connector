@@ -1,0 +1,43 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Add-on: Fleet Assistant Connector
+# Displays a simple app banner on startup.
+#
+# This OVERRIDES hassio-addons/app-base's own base-addon-banner script by
+# shadowing it at the same path. Verified to land here against
+# ghcr.io/hassio-addons/base:21.0.2 (bundled s6-overlay 3.2.3.2) — this path
+# is version-pinned, not a stable symlink, so if BUILD_FROM in the Dockerfile
+# is ever bumped to a base image with a different bundled s6-overlay version,
+# re-verify this path still matches (pull the new base image and check
+# `readlink -f /package/admin/s6-overlay` inside it) or this override will
+# silently stop applying and the original upstream banner text will return.
+# ==============================================================================
+if bashio::supervisor.ping; then
+    bashio::log.blue \
+        '-----------------------------------------------------------'
+    bashio::log.blue " App: $(bashio::app.name)"
+    bashio::log.blue " $(bashio::app.description)"
+    bashio::log.blue \
+        '-----------------------------------------------------------'
+
+    bashio::log.blue " App version: $(bashio::app.version)"
+    if bashio::var.true "$(bashio::app.update_available)"; then
+        bashio::log.magenta ' There is an update available for this app!'
+        bashio::log.magenta \
+            " Latest app version: $(bashio::app.version_latest)"
+        bashio::log.magenta ' Please consider upgrading as soon as possible.'
+    fi
+
+    bashio::log.blue " System: $(bashio::info.operating_system)" \
+        " ($(bashio::info.arch) / $(bashio::info.machine))"
+    bashio::log.blue " Home Assistant Core: $(bashio::info.homeassistant)"
+    bashio::log.blue " Home Assistant Supervisor: $(bashio::info.supervisor)"
+
+    bashio::log.blue \
+        '-----------------------------------------------------------'
+    bashio::log.blue \
+        ' Please share above information when contacting support@fleet-assistant.io'
+    bashio::log.blue \
+        '-----------------------------------------------------------'
+fi
