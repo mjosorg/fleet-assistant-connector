@@ -1,4 +1,4 @@
-# Home Assistant Add-on: m-connect
+# Home Assistant Add-on: Fleet Assistant Connector
 
 Wireguard client for Home Assistant
 
@@ -6,67 +6,50 @@ Wireguard client for Home Assistant
 
 Follow these steps to get the add-on installed on your system:
 
-1. Navigate in your Home Assistant frontend to **Supervisor** -> **Add-on Store**.
+1. Navigate in your Home Assistant frontend to **Settings** -> **Add-ons** -> **Add-on Store**.
 2. Select **Repositories** from the top right menu.
-3. Paste the github URL for the project. https://github.com/kjetilmjos/m-connect
+3. Paste the GitHub URL for the project: https://github.com/mjosorg/fleet-assistant-connector
 4. Click on the "ADD" button.
-5. The addon is now available in the bottom of the page and can be installed.
+5. The addon is now available at the bottom of the page and can be installed.
 
 ## Configuration
 
 Add-on configuration:
 
 ```yaml
-host: str
-port: int
-publickey: str
-tunnelip: str
-enable_backup: bool
-username: str
-password: str
+log_level: list(trace|debug|info|notice|warning|error|fatal)
+server:
+  host: str
+  port: port
+  publickey: str
+  tunnelip: str
+  fleet_assistant_server_ip: str
 ```
 
-### Option: `host` (required)
+### Option: `log_level` (optional)
 
-The public facing IPv4 address of your wireguard server
+Controls how verbose the add-on's logs are. Defaults to `warning`, which only logs problems — set it to `info` or `debug` temporarily if you need to troubleshoot something (e.g. to see each backup/update as it happens).
 
-Set it to wireguard server IP `xxx.xxx.xxx.xxx`
+### Option: `server.host` (required)
 
-### Option: `port` (required)
+The public facing hostname or IPv4 address of the Fleet Assistant WireGuard server.
 
-The port you have configured on the wireguard server for wireguard traffic.
+### Option: `server.port` (required)
 
-Set to wireguard server port `xxxxx`.
+The port configured on the WireGuard server for WireGuard traffic.
 
-### Option: `publickey` (required)
+### Option: `server.publickey` (required)
 
-The public key from the wireguard master `xXXxxXxXXXX`
+The public key of the WireGuard server (master).
 
-### Option: `tunnelip` (required)
+### Option: `server.tunnelip` (required)
 
-The IP and CIDR range of the wireguard client.
-The default range for the wireguard setup in m-connect is: 10.170.204.0/27.
-If this is youur first client on the network you could choose for example. `xxx.xxx.xxx.xxx/27`
+The IP address (with CIDR) to assign to this client on the WireGuard tunnel.
 
-### Option: `enable_backup` (required)
+### Option: `server.fleet_assistant_server_ip` (required)
 
-Defaults to false. When true a backup will be synched to m-cloud server on regular intervals.
+The tunnel IP address of the Fleet Assistant server, used as the WireGuard peer's allowed IP.
 
-### Option: `username` (optional)
+## Reverse proxy setup
 
-The username obtained from the m-cloud server
-
-### Option: `password` (optional)
-
-The password obtained from the m-cloud server
-
-# Usage instructions
-
-The addon will add this section automaticly. Make sure you manually restart HA if this is not already set.
-
-```yaml
-http:
-  use_x_forwarded_for: true
-  trusted_proxies:
-    - 172.30.33.0/24
-```
+Home Assistant no longer accepts trusted-proxy settings via `configuration.yaml`. See the [README](README.md) for the manual steps to configure this under **Settings > System > Network > Reverse proxy**.

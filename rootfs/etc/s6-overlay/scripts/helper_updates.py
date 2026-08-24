@@ -75,18 +75,3 @@ def update_addon(slug: str) -> None:
         timeout=_UPDATE_TIMEOUT,
     )
     response.raise_for_status()
-
-
-def get_fleet_assistant_version() -> Optional[str]:
-    """Returns the current version of the add-on via Supervisor API."""
-    try:
-        response = requests.get(
-            f"{SUPERVISOR_BASE_URL}/addons/self/info",
-            headers=_auth_headers(),
-            timeout=10
-        )
-        response.raise_for_status()
-        return response.json().get("data", {}).get("version")
-    except requests.exceptions.RequestException as e:
-        logger.error("Unable to fetch version: %s", e)
-        return None
