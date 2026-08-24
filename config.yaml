@@ -19,6 +19,7 @@ arch:
   - amd64
 
 options:
+  log_level: warning
   server:
     host: my.VPS.org
     port: 51820
@@ -28,6 +29,7 @@ options:
     fleet_assistant_server_ip: Fleet Assistant Server IP
 
 schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
   server:
     host: str
     port: port
