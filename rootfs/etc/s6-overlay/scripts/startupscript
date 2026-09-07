@@ -86,7 +86,7 @@ cp "${config_dir}/${clientname}.conf" "/etc/wireguard/${clientname}.conf" ||
     bashio::exit.nok "Unable to copy config file to /etc/wireguard"
 
 # Always shown regardless of log_level — needed every startup to pair with the server.
-bashio::log.blue "WireGuard public key: ${peer_public_key}"
+bashio::log.blue "[$(date +%T)] WireGuard public key: ${peer_public_key}"
 
 # --- Check that Home Assistant trusts this add-on as a reverse proxy ---
 # Home Assistant needs use_x_forwarded_for + trusted_proxies set to the add-on
