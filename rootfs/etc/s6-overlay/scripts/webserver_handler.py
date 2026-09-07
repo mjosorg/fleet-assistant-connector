@@ -342,15 +342,13 @@ async def delete_backup_endpoint(slug: str):
 
 @app.get("/repairs")
 async def get_repairs():
-    """Returns active repair issues from the Supervisor's resolution center.
-
-    Home Assistant Core's own issue registry (auth expired, YAML errors, etc.)
-    is intentionally not included here — it has no REST endpoint, only a
-    websocket API, so it can't be fetched with a simple request like this.
-    """
+    """Returns active repair issues from both the Supervisor resolution centre
+    and HA Core's repair registry (HACS restarts, integration errors, etc.)."""
     from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
 
     issues = []
+
+    # --- Supervisor resolution centre ---
     try:
         resp = requests.get(
             f"{SUPERVISOR_BASE_URL}/resolution/info",
@@ -372,10 +370,34 @@ async def get_repairs():
             })
     except requests.HTTPError as e:
         logger.error("Failed to fetch repairs from Supervisor: HTTP %s", e.response.status_code)
-        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
         logger.error("Failed to reach Supervisor for repairs: %s", e)
-        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+    # --- HA Core repair registry (HACS, integrations, etc.) ---
+    # Accessed via the Supervisor's HA Core API proxy at http://supervisor/core/api/...
+    try:
+        resp = requests.get(
+            f"{SUPERVISOR_BASE_URL}/core/api/repairs/issues",
+            headers=_auth_headers(),
+            timeout=10,
+        )
+        resp.raise_for_status()
+        for issue in resp.json().get("issues", []):
+            if issue.get("dismissed_version"):
+                continue  # user already dismissed this
+            domain = issue.get("domain", "")
+            key = issue.get("translation_key", "issue")
+            issues.append({
+                "title": key.replace("_", " ").capitalize(),
+                "description": f"{domain}: {key}".strip(": "),
+                "domain": domain,
+                "severity": issue.get("severity", "warning"),
+                "source": "ha_core",
+            })
+    except requests.HTTPError as e:
+        logger.warning("Failed to fetch HA Core repairs: HTTP %s", e.response.status_code)
+    except requests.RequestException as e:
+        logger.warning("Failed to reach HA Core for repairs: %s", e)
 
     return {"issues": issues}
 
