@@ -1,5 +1,6 @@
 import os
 import re
+import copy
 import logging
 import requests
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -7,6 +8,7 @@ from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from pydantic import BaseModel, Field
 import uvicorn
+import uvicorn.config
 
 from helper_backup import (
     create_partial_backup_supervisor,
@@ -499,6 +501,15 @@ async def trigger_all_updates(background_tasks: BackgroundTasks):
     return {"status": "triggered", "queued": queued}
 
 
+def _uvicorn_log_config():
+    """Uvicorn's default log config has no timestamp; prefix one to match our own logger format."""
+    log_config = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
+    for formatter in log_config["formatters"].values():
+        formatter["fmt"] = "%(asctime)s " + formatter["fmt"]
+        formatter["datefmt"] = "%Y-%m-%d %H:%M:%S"
+    return log_config
+
+
 if __name__ == "__main__":
     logger.info("Fleet Assistant Supervisor Proxy listening on port 8321")
-    uvicorn.run(app, host="0.0.0.0", port=8321, log_level="warning")
+    uvicorn.run(app, host="0.0.0.0", port=8321, log_level="warning", log_config=_uvicorn_log_config())
