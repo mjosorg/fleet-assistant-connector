@@ -1,8 +1,11 @@
 import os
 import re
 import copy
+import json
+import asyncio
 import logging
 import requests
+import websockets
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from typing import List, Optional
@@ -340,15 +343,43 @@ async def delete_backup_endpoint(slug: str):
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
 
 
+async def _fetch_core_repair_issues() -> list:
+    """Fetches active repair issues from HA Core's issue registry.
+
+    Core has no REST endpoint for this (only the `repairs/list_issues`
+    websocket command), so this speaks the websocket API directly through the
+    Supervisor's proxy at ws://supervisor/core/websocket. Requires
+    `homeassistant_api: true` in config.yaml.
+    """
+    from helper_backup import _get_token
+
+    async with websockets.connect(
+        "ws://supervisor/core/websocket", open_timeout=10, close_timeout=5
+    ) as ws:
+        hello = json.loads(await ws.recv())
+        if hello.get("type") != "auth_required":
+            raise RuntimeError(f"Unexpected handshake message: {hello}")
+
+        await ws.send(json.dumps({"type": "auth", "access_token": _get_token()}))
+        auth_result = json.loads(await ws.recv())
+        if auth_result.get("type") != "auth_ok":
+            raise RuntimeError(f"WebSocket auth failed: {auth_result}")
+
+        await ws.send(json.dumps({"id": 1, "type": "repairs/list_issues"}))
+        response = json.loads(await ws.recv())
+        if not response.get("success"):
+            raise RuntimeError(f"repairs/list_issues failed: {response.get('error')}")
+
+        return response.get("result", {}).get("issues", [])
+
+
 @app.get("/repairs")
 async def get_repairs():
-    """Returns active repair issues from both the Supervisor resolution centre
-    and HA Core's repair registry (HACS restarts, integration errors, etc.)."""
+    """Returns active repair issues from both the Supervisor resolution center
+    and HA Core's issue registry (auth expired, YAML errors, HACS, etc.)."""
     from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
 
     issues = []
-
-    # --- Supervisor resolution centre ---
     try:
         resp = requests.get(
             f"{SUPERVISOR_BASE_URL}/resolution/info",
@@ -373,20 +404,13 @@ async def get_repairs():
     except requests.RequestException as e:
         logger.error("Failed to reach Supervisor for repairs: %s", e)
 
-    # --- HA Core repair registry (HACS, integrations, etc.) ---
-    # Accessed via the Supervisor's HA Core API proxy at http://supervisor/core/api/...
     try:
-        resp = requests.get(
-            f"{SUPERVISOR_BASE_URL}/core/api/repairs/issues",
-            headers=_auth_headers(),
-            timeout=10,
-        )
-        resp.raise_for_status()
-        for issue in resp.json().get("issues", []):
-            if issue.get("dismissed_version"):
+        core_issues = await asyncio.wait_for(_fetch_core_repair_issues(), timeout=10)
+        for issue in core_issues:
+            if issue.get("dismissed_version") or issue.get("ignored"):
                 continue  # user already dismissed this
             domain = issue.get("domain", "")
-            key = issue.get("translation_key", "issue")
+            key = issue.get("translation_key") or "issue"
             issues.append({
                 "title": key.replace("_", " ").capitalize(),
                 "description": f"{domain}: {key}".strip(": "),
@@ -394,10 +418,8 @@ async def get_repairs():
                 "severity": issue.get("severity", "warning"),
                 "source": "ha_core",
             })
-    except requests.HTTPError as e:
-        logger.warning("Failed to fetch HA Core repairs: HTTP %s", e.response.status_code)
-    except requests.RequestException as e:
-        logger.warning("Failed to reach HA Core for repairs: %s", e)
+    except Exception as e:
+        logger.warning("Failed to fetch HA Core repairs via websocket: %s", e)
 
     return {"issues": issues}
 
