@@ -210,15 +210,32 @@ async def system_health():
     if memory_used is None or memory_total is None:
         memory_used, memory_total = _proc_memory()
 
-    os_info = d.get("operating_system") or {}
+    # /host/info's own "operating_system" field is just a display string (e.g.
+    # "Home Assistant OS") and has no "board"/"version" — those live on /os/info,
+    # which is HAOS-only and absent (or empty) on Supervised/generic installs.
+    board = None
+    os_version = None
+    try:
+        os_response = requests.get(
+            f"{SUPERVISOR_BASE_URL}/os/info",
+            headers=_auth_headers(),
+            timeout=10,
+        )
+        os_response.raise_for_status()
+        os_data = os_response.json().get("data", {})
+        board = os_data.get("board")
+        os_version = os_data.get("version")
+    except requests.RequestException as e:
+        logger.warning("Failed to fetch OS info from Supervisor: %s", e)
+
     return {
         "cpu_percent": cpu_percent,
         "memory_used": memory_used,
         "memory_total": memory_total,
         "disk_used": d.get("disk_used"),
         "disk_total": d.get("disk_total"),
-        "board": os_info.get("board") or d.get("board"),
-        "os_version": os_info.get("version"),
+        "board": board or d.get("machine"),
+        "os_version": os_version,
         "hostname": d.get("hostname"),
     }
 
