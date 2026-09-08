@@ -210,15 +210,16 @@ async def system_health():
     if memory_used is None or memory_total is None:
         memory_used, memory_total = _proc_memory()
 
+    os_info = d.get("operating_system") or {}
     return {
         "cpu_percent": cpu_percent,
         "memory_used": memory_used,
         "memory_total": memory_total,
         "disk_used": d.get("disk_used"),
         "disk_total": d.get("disk_total"),
-        "operating_system": d.get("operating_system"),
+        "board": os_info.get("board") or d.get("board"),
+        "os_version": os_info.get("version"),
         "hostname": d.get("hostname"),
-        "board": d.get("board"),
     }
 
 
