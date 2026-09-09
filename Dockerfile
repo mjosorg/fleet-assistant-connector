@@ -1,4 +1,4 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base:21.0.2
+ARG BUILD_FROM=ghcr.io/hassio-addons/base:21.0.4
 
 FROM $BUILD_FROM
 
@@ -18,6 +18,7 @@ RUN \
     && pip install --no-cache-dir --break-system-packages \
        requests~=2.34 \
        fastapi~=0.141 \
-       uvicorn~=0.52
+       uvicorn~=0.52 \
+       websockets~=17.1
 
 COPY rootfs /

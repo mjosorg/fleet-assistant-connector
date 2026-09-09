@@ -1,12 +1,17 @@
 import os
 import re
+import copy
+import json
+import asyncio
 import logging
 import requests
+import websockets
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from pydantic import BaseModel, Field
 import uvicorn
+import uvicorn.config
 
 from helper_backup import (
     create_partial_backup_supervisor,
@@ -205,15 +210,33 @@ async def system_health():
     if memory_used is None or memory_total is None:
         memory_used, memory_total = _proc_memory()
 
+    # /host/info's own "operating_system" field is just a display string (e.g.
+    # "Home Assistant OS") and has no "board"/"version" — those live on /os/info,
+    # which is HAOS-only and absent (or empty) on Supervised/generic installs.
+    board = None
+    os_version = None
+    try:
+        os_response = requests.get(
+            f"{SUPERVISOR_BASE_URL}/os/info",
+            headers=_auth_headers(),
+            timeout=10,
+        )
+        os_response.raise_for_status()
+        os_data = os_response.json().get("data", {})
+        board = os_data.get("board")
+        os_version = os_data.get("version")
+    except requests.RequestException as e:
+        logger.warning("Failed to fetch OS info from Supervisor: %s", e)
+
     return {
         "cpu_percent": cpu_percent,
         "memory_used": memory_used,
         "memory_total": memory_total,
         "disk_used": d.get("disk_used"),
         "disk_total": d.get("disk_total"),
-        "operating_system": d.get("operating_system"),
+        "board": board or d.get("machine"),
+        "os_version": os_version,
         "hostname": d.get("hostname"),
-        "board": d.get("board"),
     }
 
 
@@ -338,14 +361,40 @@ async def delete_backup_endpoint(slug: str):
         raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
 
 
+async def _fetch_core_repair_issues() -> list:
+    """Fetches active repair issues from HA Core's issue registry.
+
+    Core has no REST endpoint for this (only the `repairs/list_issues`
+    websocket command), so this speaks the websocket API directly through the
+    Supervisor's proxy at ws://supervisor/core/websocket. Requires
+    `homeassistant_api: true` in config.yaml.
+    """
+    from helper_backup import _get_token
+
+    async with websockets.connect(
+        "ws://supervisor/core/websocket", open_timeout=10, close_timeout=5
+    ) as ws:
+        hello = json.loads(await ws.recv())
+        if hello.get("type") != "auth_required":
+            raise RuntimeError(f"Unexpected handshake message: {hello}")
+
+        await ws.send(json.dumps({"type": "auth", "access_token": _get_token()}))
+        auth_result = json.loads(await ws.recv())
+        if auth_result.get("type") != "auth_ok":
+            raise RuntimeError(f"WebSocket auth failed: {auth_result}")
+
+        await ws.send(json.dumps({"id": 1, "type": "repairs/list_issues"}))
+        response = json.loads(await ws.recv())
+        if not response.get("success"):
+            raise RuntimeError(f"repairs/list_issues failed: {response.get('error')}")
+
+        return response.get("result", {}).get("issues", [])
+
+
 @app.get("/repairs")
 async def get_repairs():
-    """Returns active repair issues from the Supervisor's resolution center.
-
-    Home Assistant Core's own issue registry (auth expired, YAML errors, etc.)
-    is intentionally not included here — it has no REST endpoint, only a
-    websocket API, so it can't be fetched with a simple request like this.
-    """
+    """Returns active repair issues from both the Supervisor resolution center
+    and HA Core's issue registry (auth expired, YAML errors, HACS, etc.)."""
     from helper_backup import SUPERVISOR_BASE_URL, _auth_headers
 
     issues = []
@@ -370,10 +419,25 @@ async def get_repairs():
             })
     except requests.HTTPError as e:
         logger.error("Failed to fetch repairs from Supervisor: HTTP %s", e.response.status_code)
-        raise HTTPException(status_code=502, detail=f"Supervisor API error: {e.response.status_code}")
     except requests.RequestException as e:
         logger.error("Failed to reach Supervisor for repairs: %s", e)
-        raise HTTPException(status_code=502, detail=f"Supervisor connection error: {str(e)}")
+
+    try:
+        core_issues = await asyncio.wait_for(_fetch_core_repair_issues(), timeout=10)
+        for issue in core_issues:
+            if issue.get("dismissed_version") or issue.get("ignored"):
+                continue  # user already dismissed this
+            domain = issue.get("domain", "")
+            key = issue.get("translation_key") or "issue"
+            issues.append({
+                "title": key.replace("_", " ").capitalize(),
+                "description": f"{domain}: {key}".strip(": "),
+                "domain": domain,
+                "severity": issue.get("severity", "warning"),
+                "source": "ha_core",
+            })
+    except Exception as e:
+        logger.warning("Failed to fetch HA Core repairs via websocket: %s", e)
 
     return {"issues": issues}
 
@@ -499,6 +563,15 @@ async def trigger_all_updates(background_tasks: BackgroundTasks):
     return {"status": "triggered", "queued": queued}
 
 
+def _uvicorn_log_config():
+    """Uvicorn's default log config has no timestamp; prefix one to match our own logger format."""
+    log_config = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
+    for formatter in log_config["formatters"].values():
+        formatter["fmt"] = "%(asctime)s " + formatter["fmt"]
+        formatter["datefmt"] = "%Y-%m-%d %H:%M:%S"
+    return log_config
+
+
 if __name__ == "__main__":
     logger.info("Fleet Assistant Supervisor Proxy listening on port 8321")
-    uvicorn.run(app, host="0.0.0.0", port=8321, log_level="warning")
+    uvicorn.run(app, host="0.0.0.0", port=8321, log_level="warning", log_config=_uvicorn_log_config())

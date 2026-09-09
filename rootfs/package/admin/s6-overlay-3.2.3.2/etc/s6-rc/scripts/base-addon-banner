@@ -13,31 +13,35 @@
 # `readlink -f /package/admin/s6-overlay` inside it) or this override will
 # silently stop applying and the original upstream banner text will return.
 # ==============================================================================
+declare ts
+
 if bashio::supervisor.ping; then
+    ts="[$(date +%T)]"
+
     bashio::log.blue \
         '-----------------------------------------------------------'
-    bashio::log.blue " App: $(bashio::app.name)"
-    bashio::log.blue " $(bashio::app.description)"
+    bashio::log.blue "${ts} App: $(bashio::app.name)"
+    bashio::log.blue "${ts} $(bashio::app.description)"
     bashio::log.blue \
         '-----------------------------------------------------------'
 
-    bashio::log.blue " App version: $(bashio::app.version)"
+    bashio::log.blue "${ts} App version: $(bashio::app.version)"
     if bashio::var.true "$(bashio::app.update_available)"; then
-        bashio::log.magenta ' There is an update available for this app!'
+        bashio::log.magenta "${ts} There is an update available for this app!"
         bashio::log.magenta \
-            " Latest app version: $(bashio::app.version_latest)"
-        bashio::log.magenta ' Please consider upgrading as soon as possible.'
+            "${ts} Latest app version: $(bashio::app.version_latest)"
+        bashio::log.magenta "${ts} Please consider upgrading as soon as possible."
     fi
 
-    bashio::log.blue " System: $(bashio::info.operating_system)" \
+    bashio::log.blue "${ts} System: $(bashio::info.operating_system)" \
         " ($(bashio::info.arch) / $(bashio::info.machine))"
-    bashio::log.blue " Home Assistant Core: $(bashio::info.homeassistant)"
-    bashio::log.blue " Home Assistant Supervisor: $(bashio::info.supervisor)"
+    bashio::log.blue "${ts} Home Assistant Core: $(bashio::info.homeassistant)"
+    bashio::log.blue "${ts} Home Assistant Supervisor: $(bashio::info.supervisor)"
 
     bashio::log.blue \
         '-----------------------------------------------------------'
     bashio::log.blue \
-        ' Please share above information when contacting support@fleet-assistant.io'
+        "${ts} Please share above information when contacting support@fleet-assistant.io"
     bashio::log.blue \
         '-----------------------------------------------------------'
 fi
