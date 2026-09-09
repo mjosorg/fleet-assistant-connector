@@ -1,3 +1,9 @@
+## 2026.09.00
+- `/repairs` now also reports Home Assistant Core's own issue registry (auth expired, YAML errors, HACS restarts, etc.), not just the Supervisor resolution center. Core has no REST endpoint for this, so it's fetched over the Supervisor's Core websocket proxy (`repairs/list_issues`). Requires the add-on's new `homeassistant_api: true` permission.
+- Fixed `/system` crashing with `AttributeError` on every request — it assumed the Supervisor's `operating_system` field was an object with `board`/`version`, but it's actually a plain display string. Board and OS version are now read from the Supervisor's `/os/info` endpoint, falling back to `/host/info`'s `machine` field if that's unavailable.
+- Timestamped startup log lines that were missing them (the app banner, "Log level is set to...", the WireGuard public key line) — they used bashio's raw color-log functions, which skip its normal `[HH:MM:SS] LEVEL:` formatting. Also gave uvicorn's own log output (previously untimestamped) the same format as the webserver's own log lines.
+- Bumped base image to `ghcr.io/hassio-addons/base:21.0.4`.
+
 ## 2026.08.00
 - Fixed startup INFO logs (reverse-proxy check, "Starting WireGuard...") sometimes printing even at `log_level: warning` — the `setup` service didn't declare a dependency on the base image's `base` bundle, so it could race ahead of `base-addon-log-level` and log before the configured level actually took effect.
 - Trimmed the base image's startup banner: dropped the "You are running the latest version of this app." line, and replaced the generic "share this info on GitHub/forums/Discord" footer with a support-email pointer. This overrides `hassio-addons/app-base`'s own banner script by shadowing it at its exact path — version-pinned to the current base image, see the comment in that file for what to check when bumping `BUILD_FROM`.
