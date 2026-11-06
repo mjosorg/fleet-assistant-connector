@@ -1,3 +1,15 @@
+## 2026.11.00
+- Bumped the base image to `hassio-addons/base` 21.0.10 (Alpine 3.24, curl 8.23.0). It still ships s6-overlay 3.2.3.2, so the banner and log-level overrides under `/package/admin/s6-overlay-3.2.3.2/` keep applying.
+- Updated Python dependencies: `requests` 2.34.2, `fastapi` 0.162.0, `uvicorn` 0.54.0, `websockets` 17.4.
+
+## 2026.09.00
+- `/repairs` now also returns HA Core repair issues (HACS restart required, integration errors, expired auth, etc.), fetched over the Core websocket API (`repairs/list_issues`) through the Supervisor proxy. Dismissed or ignored issues are skipped, and each issue has a `source` field. Supervisor and Core issues are fetched independently, so if one fails the other is still returned and the endpoint no longer returns a 502.
+- `/system`: `board` now comes from `/os/info` (the top-level board field is always null on HAOS), falling back to the machine type on non-HAOS installs. `operating_system` was replaced by a plain `os_version` string.
+- Added timestamps to the startup banner, the log-level message, the WireGuard public key line and uvicorn's own log output.
+- Added `websockets` as a pinned dependency.
+- Bumped the base image to `hassio-addons/base` 21.0.4.
+- Added a `.gitignore` for Python bytecode.
+
 ## 2026.08.00
 - Fixed startup INFO logs (reverse-proxy check, "Starting WireGuard...") sometimes printing even at `log_level: warning` — the `setup` service didn't declare a dependency on the base image's `base` bundle, so it could race ahead of `base-addon-log-level` and log before the configured level actually took effect.
 - Trimmed the base image's startup banner: dropped the "You are running the latest version of this app." line, and replaced the generic "share this info on GitHub/forums/Discord" footer with a support-email pointer. This overrides `hassio-addons/app-base`'s own banner script by shadowing it at its exact path — version-pinned to the current base image, see the comment in that file for what to check when bumping `BUILD_FROM`.
